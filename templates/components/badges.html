@@ -1,0 +1,374 @@
+{% comment %}
+=====================================
+BADGES COMPONENTS LIBRARY
+=====================================
+Usage: {% include 'components/badges.html' with type='success' text='Active' %}
+       {% include 'components/badges.html' with type='status' status=object.status %}
+=====================================
+{% endcomment %}
+
+{% load static %}
+
+<!-- Basic Badge Component -->
+{% if type == 'basic' %}
+<span class="badge badge-{{ color|default:'info' }} {{ class|default:'' }}">
+    {% if icon %}<i class="fas fa-{{ icon }} mr-1"></i>{% endif %}
+    {{ text }}
+</span>
+{% endif %}
+
+<!-- Status Badge Component -->
+{% if type == 'status' %}
+<span class="badge 
+    {% if status == 'active' or status == 'approved' or status == 'present' or status == 'completed' or status == 'paid' %}badge-success
+    {% elif status == 'inactive' or status == 'rejected' or status == 'absent' or status == 'failed' or status == 'overdue' %}badge-error
+    {% elif status == 'pending' or status == 'partial' or status == 'late' or status == 'partially_paid' %}badge-warning
+    {% elif status == 'draft' or status == 'processing' %}badge-info
+    {% else %}badge-info{% endif %}">
+    {% if icon %}
+        {% if status == 'active' or status == 'approved' %}<i class="fas fa-check-circle mr-1"></i>
+        {% elif status == 'inactive' %}<i class="fas fa-times-circle mr-1"></i>
+        {% elif status == 'pending' %}<i class="fas fa-clock mr-1"></i>
+        {% elif status == 'completed' %}<i class="fas fa-check-double mr-1"></i>
+        {% elif status == 'paid' %}<i class="fas fa-money-bill-wave mr-1"></i>
+        {% elif status == 'overdue' %}<i class="fas fa-exclamation-triangle mr-1"></i>
+        {% elif status == 'late' %}<i class="fas fa-clock mr-1"></i>
+        {% elif status == 'absent' %}<i class="fas fa-user-slash mr-1"></i>
+        {% elif status == 'present' %}<i class="fas fa-user-check mr-1"></i>
+        {% endif %}
+    {% endif %}
+    {{ text|default:status|title }}
+</span>
+{% endif %}
+
+<!-- Role Badge Component -->
+{% if type == 'role' %}
+<span class="badge 
+    {% if role == 'admin' %}badge-error
+    {% elif role == 'teacher' %}badge-success
+    {% elif role == 'student' %}badge-info
+    {% elif role == 'parent' %}badge-warning
+    {% elif role == 'accountant' %}badge-purple
+    {% else %}badge-info{% endif %}">
+    <i class="fas 
+        {% if role == 'admin' %}fa-user-cog
+        {% elif role == 'teacher' %}fa-chalkboard-teacher
+        {% elif role == 'student' %}fa-user-graduate
+        {% elif role == 'parent' %}fa-user-friends
+        {% elif role == 'accountant' %}fa-calculator
+        {% else %}fa-user{% endif %} 
+        mr-1"></i>
+    {{ text|default:role|title }}
+</span>
+{% endif %}
+
+<!-- Grade Badge Component -->
+{% if type == 'grade' %}
+<span class="badge 
+    {% if grade == 'A' or grade == 'A-' %}badge-success
+    {% elif grade == 'B+' or grade == 'B' or grade == 'B-' %}badge-info
+    {% elif grade == 'C+' or grade == 'C' or grade == 'C-' %}badge-warning
+    {% else %}badge-error{% endif %}">
+    {{ grade }}
+</span>
+{% endif %}
+
+<!-- Priority Badge Component -->
+{% if type == 'priority' %}
+<span class="badge 
+    {% if priority == 'high' or priority == 'urgent' %}badge-error
+    {% elif priority == 'medium' or priority == 'normal' %}badge-warning
+    {% elif priority == 'low' %}badge-success
+    {% else %}badge-info{% endif %}">
+    <i class="fas 
+        {% if priority == 'high' or priority == 'urgent' %}fa-exclamation-circle
+        {% elif priority == 'medium' %}fa-exclamation-triangle
+        {% elif priority == 'low' %}fa-arrow-down
+        {% else %}fa-flag{% endif %} 
+        mr-1"></i>
+    {{ text|default:priority|title }}
+</span>
+{% endif %}
+
+<!-- Count Badge Component -->
+{% if type == 'count' %}
+<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none 
+    {% if color == 'red' %}bg-red-500 text-white
+    {% elif color == 'green' %}bg-green-500 text-white
+    {% elif color == 'yellow' %}bg-yellow-500 text-white
+    {% elif color == 'blue' %}bg-blue-500 text-white
+    {% elif color == 'purple' %}bg-purple-500 text-white
+    {% else %}bg-white/20 text-white{% endif %} 
+    rounded-full {{ class|default:'' }}">
+    {{ count }}
+</span>
+{% endif %}
+
+<!-- Pill Badge Component -->
+{% if type == 'pill' %}
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+    {% if color == 'success' %}bg-green-500/20 text-green-400 border border-green-500/30
+    {% elif color == 'error' %}bg-red-500/20 text-red-400 border border-red-500/30
+    {% elif color == 'warning' %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30
+    {% elif color == 'info' %}bg-blue-500/20 text-blue-400 border border-blue-500/30
+    {% else %}bg-white/10 text-white/80 border border-white/20{% endif %}">
+    {% if icon %}<i class="fas fa-{{ icon }} mr-1"></i>{% endif %}
+    {{ text }}
+</span>
+{% endif %}
+
+<!-- Attendance Badge Component -->
+{% if type == 'attendance' %}
+<span class="badge 
+    {% if status == 'present' %}badge-success
+    {% elif status == 'absent' %}badge-error
+    {% elif status == 'late' %}badge-warning
+    {% elif status == 'excused' or status == 'sick' %}badge-info
+    {% endif %}">
+    <i class="fas 
+        {% if status == 'present' %}fa-check-circle
+        {% elif status == 'absent' %}fa-times-circle
+        {% elif status == 'late' %}fa-clock
+        {% elif status == 'excused' %}fa-check-double
+        {% elif status == 'sick' %}fa-thermometer-half
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:status|title }}
+</span>
+{% endif %}
+
+<!-- Payment Method Badge Component -->
+{% if type == 'payment_method' %}
+<span class="badge badge-info">
+    <i class="fas 
+        {% if method == 'cash' %}fa-money-bill-wave
+        {% elif method == 'mpesa' %}fa-mobile-alt
+        {% elif method == 'bank_transfer' %}fa-university
+        {% elif method == 'cheque' %}fa-money-check
+        {% elif method == 'card' %}fa-credit-card
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:method|title|replace:'_',' ' }}
+</span>
+{% endif %}
+
+<!-- Exam Type Badge Component -->
+{% if type == 'exam_type' %}
+<span class="badge 
+    {% if exam_type == 'endterm' %}badge-error
+    {% elif exam_type == 'midterm' %}badge-warning
+    {% elif exam_type == 'cat' %}badge-info
+    {% elif exam_type == 'mock' %}badge-purple
+    {% elif exam_type == 'national' %}badge-success
+    {% endif %}">
+    <i class="fas 
+        {% if exam_type == 'endterm' %}fa-calendar-check
+        {% elif exam_type == 'midterm' %}fa-calendar-alt
+        {% elif exam_type == 'cat' %}fa-pencil-alt
+        {% elif exam_type == 'mock' %}fa-copy
+        {% elif exam_type == 'national' %}fa-flag
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:exam_type|title }}
+</span>
+{% endif %}
+
+<!-- Holiday Type Badge Component -->
+{% if type == 'holiday_type' %}
+<span class="badge 
+    {% if holiday_type == 'public' %}badge-error
+    {% elif holiday_type == 'school' %}badge-success
+    {% elif holiday_type == 'sports' %}badge-warning
+    {% elif holiday_type == 'event' %}badge-info
+    {% endif %}">
+    <i class="fas 
+        {% if holiday_type == 'public' %}fa-flag
+        {% elif holiday_type == 'school' %}fa-school
+        {% elif holiday_type == 'sports' %}fa-futbol
+        {% elif holiday_type == 'event' %}fa-calendar-star
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:holiday_type|title }}
+</span>
+{% endif %}
+
+<!-- Gender Badge Component -->
+{% if type == 'gender' %}
+<span class="badge 
+    {% if gender == 'M' %}badge-info
+    {% elif gender == 'F' %}badge-success
+    {% endif %}">
+    <i class="fas 
+        {% if gender == 'M' %}fa-mars
+        {% elif gender == 'F' %}fa-venus
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:gender }}
+</span>
+{% endif %}
+
+<!-- Document Type Badge Component -->
+{% if type == 'document_type' %}
+<span class="badge badge-info">
+    <i class="fas 
+        {% if doc_type == 'id' %}fa-id-card
+        {% elif doc_type == 'certificate' %}fa-certificate
+        {% elif doc_type == 'transcript' %}fa-scroll
+        {% elif doc_type == 'photo' %}fa-camera
+        {% elif doc_type == 'medical' %}fa-notes-medical
+        {% else %}fa-file{% endif %} 
+        mr-1"></i>
+    {{ text|default:doc_type|title|replace:'_',' ' }}
+</span>
+{% endif %}
+
+<!-- Leave Type Badge Component -->
+{% if type == 'leave_type' %}
+<span class="badge badge-info">
+    <i class="fas 
+        {% if leave_type == 'annual' %}fa-umbrella-beach
+        {% elif leave_type == 'sick' %}fa-thermometer-half
+        {% elif leave_type == 'maternity' %}fa-baby
+        {% elif leave_type == 'paternity' %}fa-child
+        {% elif leave_type == 'compassionate' %}fa-heart
+        {% elif leave_type == 'study' %}fa-graduation-cap
+        {% elif leave_type == 'unpaid' %}fa-coins
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:leave_type|title }}
+</span>
+{% endif %}
+
+<!-- Employment Type Badge Component -->
+{% if type == 'employment_type' %}
+<span class="badge 
+    {% if emp_type == 'permanent' %}badge-success
+    {% elif emp_type == 'contract' %}badge-info
+    {% elif emp_type == 'intern' %}badge-warning
+    {% elif emp_type == 'part_time' %}badge-purple
+    {% endif %}">
+    {{ text|default:emp_type|title }}
+</span>
+{% endif %}
+
+<!-- Qualification Level Badge Component -->
+{% if type == 'qualification' %}
+<span class="badge 
+    {% if level == 'phd' %}badge-error
+    {% elif level == 'masters' %}badge-warning
+    {% elif level == 'bachelors' %}badge-success
+    {% elif level == 'diploma' %}badge-info
+    {% elif level == 'certificate' %}badge-purple
+    {% endif %}">
+    <i class="fas 
+        {% if level == 'phd' %}fa-graduation-cap
+        {% elif level == 'masters' %}fa-graduation-cap
+        {% elif level == 'bachelors' %}fa-graduation-cap
+        {% elif level == 'diploma' %}fa-certificate
+        {% elif level == 'certificate' %}fa-award
+        {% endif %} 
+        mr-1"></i>
+    {{ text|default:level|title }}
+</span>
+{% endif %}
+
+<!-- Percentage Badge Component -->
+{% if type == 'percentage' %}
+<span class="badge 
+    {% if value >= 80 %}badge-success
+    {% elif value >= 60 %}badge-info
+    {% elif value >= 40 %}badge-warning
+    {% else %}badge-error{% endif %}">
+    {{ value|floatformat:0 }}%
+</span>
+{% endif %}
+
+<!-- Year Badge Component -->
+{% if type == 'year' %}
+<span class="badge badge-info">
+    <i class="fas fa-calendar-alt mr-1"></i>
+    {{ year }}
+</span>
+{% endif %}
+
+<!-- Icon Only Badge -->
+{% if type == 'icon' %}
+<span class="badge badge-{{ color|default:'info' }} p-2">
+    <i class="fas fa-{{ icon }}"></i>
+</span>
+{% endif %}
+
+<!-- Dotted Badge (for notifications) -->
+{% if type == 'dot' %}
+<span class="relative inline-flex">
+    <span class="absolute top-0 right-0 block h-2 w-2 rounded-full 
+        {% if color == 'red' %}bg-red-500
+        {% elif color == 'green' %}bg-green-500
+        {% elif color == 'yellow' %}bg-yellow-500
+        {% else %}bg-blue-500{% endif %} 
+        ring-2 ring-white"></span>
+</span>
+{% endif %}
+
+<!-- Counter Badge (for notifications) -->
+{% if type == 'counter' %}
+<span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+    {{ count }}
+</span>
+{% endif %}
+
+<!-- Combined Badge with Tooltip -->
+{% if type == 'with_tooltip' %}
+<span class="relative group">
+    <span class="badge 
+        {% if color == 'success' %}badge-success
+        {% elif color == 'error' %}badge-error
+        {% elif color == 'warning' %}badge-warning
+        {% else %}badge-info{% endif %} 
+        cursor-help">
+        {% if icon %}<i class="fas fa-{{ icon }} mr-1"></i>{% endif %}
+        {{ text }}
+    </span>
+    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+        {{ tooltip }}
+        <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+    </div>
+</span>
+{% endif %}
+
+<style>
+/* Additional badge styles for custom colors */
+.badge-purple {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c4b5fd;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.badge-purple i {
+    color: #c4b5fd;
+}
+
+/* Animation for new badges */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.badge-new {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Hover effect for all badges */
+.badge {
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+</style>
