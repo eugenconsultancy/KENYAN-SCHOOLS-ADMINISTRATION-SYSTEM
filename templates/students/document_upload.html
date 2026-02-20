@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upload Document - {{ student.get_full_name }}{% endblock %}
+
+{% block page_title %}Upload Document for {{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Student Info -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex items-center">
+            <img src="{{ student.user.get_profile_picture }}" alt="{{ student.get_full_name }}" 
+                 class="h-12 w-12 rounded-full object-cover border-2 border-white mr-3">
+            <div>
+                <h3 class="text-white font-medium">{{ student.get_full_name }}</h3>
+                <p class="text-sm text-white/60">{{ student.admission_number }} | Form {{ student.current_class }} {{ student.stream }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Document Type -->
+            <div class="mb-6">
+                <label for="{{ form.document_type.id_for_label }}" class="form-label">
+                    Document Type <span class="text-red-400">*</span>
+                </label>
+                <select name="{{ form.document_type.name }}" id="documentType" class="glass-input" required>
+                    <option value="">Select Document Type</option>
+                    {% for value, label in form.document_type.field.choices %}
+                        {% if value %}
+                        <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                {% if form.document_type.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.document_type.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Title -->
+            <div class="mb-6">
+                <label for="{{ form.title.id_for_label }}" class="form-label">
+                    Document Title <span class="text-red-400">*</span>
+                </label>
+                <input type="text" name="{{ form.title.name }}" id="titleField" 
+                       value="{{ form.title.value|default:'' }}" 
+                       class="glass-input" 
+                       placeholder="e.g., Birth Certificate, KCPE Results Slip"
+                       required>
+                {% if form.title.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.title.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- File Upload Area -->
+            <div class="mb-6">
+                <label class="form-label">
+                    File <span class="text-red-400">*</span>
+                </label>
+                
+                <div class="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-blue-500/50 transition-colors cursor-pointer"
+                     onclick="document.getElementById('fileInput').click()"
+                     id="dropZone">
+                    
+                    <input type="file" name="{{ form.file.name }}" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                    
+                    <div id="uploadPrompt">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-white/40 mb-3"></i>
+                        <p class="text-white mb-1">Drag and drop your file here or click to browse</p>
+                        <p class="text-sm text-white/40">Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
+                    </div>
+                    
+                    <div id="filePreview" class="hidden">
+                        <div class="flex items-center justify-center space-x-3">
+                            <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-pdf text-blue-400 text-2xl" id="fileIcon"></i>
+                            </div>
+                            <div class="text-left">
+                                <p class="text-white font-medium" id="fileName"></p>
+                                <p class="text-sm text-white/40" id="fileSize"></p>
+                            </div>
+                            <button type="button" onclick="resetFileInput()" 
+                                    class="text-white/40 hover:text-white">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if form.file.errors %}
+                <p class="text-sm text-red-400 mt-2">{{ form.file.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Description -->
+            <div class="mb-6">
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    Description (Optional)
+                </label>
+                <textarea name="{{ form.description.name }}" id="descriptionField" 
+                          rows="3" class="glass-input" 
+                          placeholder="Add any additional notes about this document...">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Document Preview (for images) -->
+            <div id="imagePreview" class="hidden mb-6">
+                <label class="form-label">Preview</label>
+                <div class="bg-white/5 rounded-lg p-4">
+                    <img id="previewImage" src="#" alt="Preview" class="max-h-64 mx-auto">
+                </div>
+            </div>
+            
+            <!-- Guidelines -->
+            <div class="bg-blue-500/10 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    Upload Guidelines
+                </h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>Ensure documents are clear and legible</li>
+                    <li>Maximum file size: 10MB</li>
+                    <li>Accepted formats: PDF, DOC, DOCX, JPG, PNG</li>
+                    <li>For certificates, upload both sides if applicable</li>
+                    <li>Use descriptive titles for easy identification</li>
+                </ul>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'students:documents' student.id %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50" id="submitBtn">
+                    <i class="fas fa-upload mr-2"></i>Upload Document
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // File input handling
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileIcon = document.getElementById('fileIcon');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    // Auto-fill title based on document type
+    const documentType = document.getElementById('documentType');
+    const titleField = document.getElementById('titleField');
+    
+    documentType.addEventListener('change', function() {
+        if (!titleField.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            const typeText = selectedOption.text;
+            
+            // Generate suggested title
+            const studentName = "{{ student.get_full_name }}";
+            const date = new Date().toLocaleDateString('en-GB');
+            
+            if (typeText) {
+                titleField.value = `${studentName} - ${typeText} - ${date}`;
+            }
+        }
+    });
+    
+    // Drag and drop handlers
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-500');
+    });
+    
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500');
+        
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files;
+            handleFileSelect();
+        }
+    });
+    
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    function handleFileSelect() {
+        const file = fileInput.files[0];
+        if (!file) return;
+        
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size exceeds 10MB limit');
+            resetFileInput();
+            return;
+        }
+        
+        // Show preview
+        uploadPrompt.classList.add('hidden');
+        filePreview.classList.remove('hidden');
+        
+        // Update file info
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        // Update icon based on file type
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'pdf') {
+            fileIcon.className = 'fas fa-file-pdf text-red-400 text-2xl';
+        } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+            fileIcon.className = 'fas fa-file-image text-green-400 text-2xl';
+            
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                imagePreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else if (['doc', 'docx'].includes(ext)) {
+            fileIcon.className = 'fas fa-file-word text-blue-400 text-2xl';
+        } else {
+            fileIcon.className = 'fas fa-file-alt text-gray-400 text-2xl';
+        }
+    }
+    
+    function resetFileInput() {
+        fileInput.value = '';
+        uploadPrompt.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+        imagePreview.classList.add('hidden');
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form submission loading state
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+    });
+</script>
+
+<style>
+    .border-dashed {
+        border-style: dashed;
+    }
+    
+    .border-dashed:hover {
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}

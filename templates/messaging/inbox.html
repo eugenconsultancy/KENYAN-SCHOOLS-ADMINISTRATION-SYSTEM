@@ -11,7 +11,7 @@
     <div class="glass-card p-4 mb-6">
         <div class="flex flex-wrap justify-between items-center">
             <div class="flex space-x-2">
-                <a href="{% url 'messaging:compose' %}" class="glass-button">
+                <a href="{% url 'messaging:compose' %}" class="glass-button bg-blue-600/50">
                     <i class="fas fa-pen mr-2"></i>Compose Message
                 </a>
                 <a href="{% url 'messaging:announcement_list' %}" class="glass-button">
@@ -19,12 +19,16 @@
                 </a>
             </div>
             
-            <form method="get" class="flex space-x-2">
-                <input type="text" name="search" placeholder="Search messages..." class="glass-input" value="{{ request.GET.search }}">
-                <button type="submit" class="glass-button">
-                    <i class="fas fa-search"></i>
+            <div class="flex items-center space-x-2">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40"></i>
+                    <input type="text" placeholder="Search messages..." 
+                           class="glass-input pl-10 w-64" id="searchInput">
+                </div>
+                <button class="glass-button" onclick="filterMessages()">
+                    <i class="fas fa-filter mr-2"></i>Filter
                 </button>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -32,32 +36,73 @@
         <!-- Sidebar -->
         <div class="lg:col-span-1">
             <div class="glass-card p-4">
-                <div class="space-y-2">
-                    <a href="{% url 'messaging:inbox' %}" class="block px-4 py-2 rounded-lg bg-white/10 text-white font-medium">
-                        <i class="fas fa-inbox mr-2"></i>Inbox
+                <!-- Folders -->
+                <div class="space-y-1">
+                    <a href="{% url 'messaging:inbox' %}" 
+                       class="flex items-center px-4 py-3 rounded-lg {% if not request.GET.folder %}bg-blue-600/30 text-white{% else %}text-white/80 hover:bg-white/10{% endif %} transition-colors">
+                        <i class="fas fa-inbox w-6"></i>
+                        <span class="flex-1">Inbox</span>
+                        {% if unread_count > 0 %}
+                        <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1">{{ unread_count }}</span>
+                        {% endif %}
                     </a>
-                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
-                        <i class="fas fa-paper-plane mr-2"></i>Sent
+                    
+                    <a href="?folder=sent" 
+                       class="flex items-center px-4 py-3 rounded-lg {% if request.GET.folder == 'sent' %}bg-blue-600/30 text-white{% else %}text-white/80 hover:bg-white/10{% endif %} transition-colors">
+                        <i class="fas fa-paper-plane w-6"></i>
+                        <span>Sent</span>
                     </a>
-                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
-                        <i class="fas fa-star mr-2"></i>Starred
+                    
+                    <a href="?folder=starred" 
+                       class="flex items-center px-4 py-3 rounded-lg {% if request.GET.folder == 'starred' %}bg-blue-600/30 text-white{% else %}text-white/80 hover:bg-white/10{% endif %} transition-colors">
+                        <i class="fas fa-star w-6"></i>
+                        <span>Starred</span>
                     </a>
-                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
-                        <i class="fas fa-archive mr-2"></i>Archive
+                    
+                    <a href="?folder=archive" 
+                       class="flex items-center px-4 py-3 rounded-lg {% if request.GET.folder == 'archive' %}bg-blue-600/30 text-white{% else %}text-white/80 hover:bg-white/10{% endif %} transition-colors">
+                        <i class="fas fa-archive w-6"></i>
+                        <span>Archive</span>
                     </a>
-                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
-                        <i class="fas fa-trash mr-2"></i>Trash
+                    
+                    <a href="?folder=trash" 
+                       class="flex items-center px-4 py-3 rounded-lg {% if request.GET.folder == 'trash' %}bg-blue-600/30 text-white{% else %}text-white/80 hover:bg-white/10{% endif %} transition-colors">
+                        <i class="fas fa-trash w-6"></i>
+                        <span>Trash</span>
                     </a>
                 </div>
                 
+                <!-- Filters -->
                 <div class="border-t border-white/20 my-4 pt-4">
                     <h4 class="text-sm font-semibold text-white/60 uppercase mb-2">Quick Filters</h4>
-                    <div class="space-y-2">
-                        <a href="#" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                    <div class="space-y-1">
+                        <a href="?filter=unread" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
                             <i class="fas fa-envelope mr-2"></i>Unread
                         </a>
-                        <a href="#" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
-                            <i class="fas fa-users mr-2"></i>Groups
+                        <a href="?filter=attachments" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <i class="fas fa-paperclip mr-2"></i>With Attachments
+                        </a>
+                        <a href="?filter=important" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <i class="fas fa-exclamation-circle mr-2"></i>Important
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Labels -->
+                <div class="border-t border-white/20 my-4 pt-4">
+                    <h4 class="text-sm font-semibold text-white/60 uppercase mb-2">Labels</h4>
+                    <div class="space-y-1">
+                        <a href="?label=work" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <span class="w-2 h-2 bg-blue-400 rounded-full inline-block mr-2"></span>
+                            Work
+                        </a>
+                        <a href="?label=personal" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <span class="w-2 h-2 bg-green-400 rounded-full inline-block mr-2"></span>
+                            Personal
+                        </a>
+                        <a href="?label=urgent" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <span class="w-2 h-2 bg-red-400 rounded-full inline-block mr-2"></span>
+                            Urgent
                         </a>
                     </div>
                 </div>
@@ -67,61 +112,195 @@
         <!-- Message List -->
         <div class="lg:col-span-3">
             <div class="glass-card">
-                <div class="border-b border-white/20 px-6 py-4">
-                    <h3 class="text-lg font-semibold text-white">Inbox</h3>
+                <!-- Toolbar -->
+                <div class="border-b border-white/20 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600">
+                        <label for="selectAll" class="text-sm text-white/60">Select All</label>
+                        
+                        <div class="h-4 w-px bg-white/20 mx-2"></div>
+                        
+                        <button class="text-white/60 hover:text-white px-2 py-1" title="Archive">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                        <button class="text-white/60 hover:text-white px-2 py-1" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="text-white/60 hover:text-white px-2 py-1" title="Mark as Read">
+                            <i class="fas fa-envelope-open"></i>
+                        </button>
+                        <button class="text-white/60 hover:text-white px-2 py-1" title="Mark as Unread">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 text-sm text-white/40">
+                        <span>1-50 of {{ total_messages }}</span>
+                        <button class="hover:text-white">&lt;</button>
+                        <button class="hover:text-white">&gt;</button>
+                    </div>
                 </div>
                 
+                <!-- Messages -->
                 {% if conversations %}
                 <div class="divide-y divide-white/10">
                     {% for conv in conversations %}
-                    <a href="{% url 'messaging:conversation' conv.id %}" class="block px-6 py-4 hover:bg-white/5 transition-colors {% if conv.unread_count > 0 %}bg-white/5{% endif %}">
+                    <div class="px-4 py-3 hover:bg-white/5 transition-colors {% if not conv.is_read %}bg-white/5{% endif %}">
                         <div class="flex items-start">
-                            <div class="flex-shrink-0">
+                            <!-- Checkbox -->
+                            <div class="flex-shrink-0 pt-2">
+                                <input type="checkbox" class="form-checkbox h-4 w-4 text-blue-600 message-checkbox">
+                            </div>
+                            
+                            <!-- Star -->
+                            <div class="flex-shrink-0 ml-2 pt-2">
+                                <button class="text-white/20 hover:text-yellow-400 transition-colors">
+                                    <i class="far fa-star"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Sender Avatar -->
+                            <div class="flex-shrink-0 ml-2">
                                 {% if conv.other_participant %}
-                                <img src="{{ conv.other_participant.get_profile_picture }}" alt="{{ conv.other_participant.get_full_name }}" class="h-10 w-10 rounded-full object-cover">
+                                <img src="{{ conv.other_participant.get_profile_picture }}" 
+                                     alt="{{ conv.other_participant.get_full_name }}" 
+                                     class="h-10 w-10 rounded-full object-cover">
                                 {% else %}
-                                <div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
-                                    <i class="fas fa-users text-white/60"></i>
+                                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                    <i class="fas fa-users text-white"></i>
                                 </div>
                                 {% endif %}
                             </div>
-                            <div class="ml-3 flex-1">
-                                <div class="flex items-center justify-between">
-                                    <h4 class="text-sm font-medium text-white">
-                                        {% if conv.other_participant %}
-                                            {{ conv.other_participant.get_full_name|default:conv.other_participant.username }}
+                            
+                            <!-- Message Content -->
+                            <div class="ml-3 flex-1 min-w-0">
+                                <a href="{% url 'messaging:conversation' conv.id %}" class="block">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-medium {% if not conv.is_read %}text-white{% else %}text-white/80{% endif %}">
+                                            {% if conv.other_participant %}
+                                                {{ conv.other_participant.get_full_name|default:conv.other_participant.username }}
+                                                <span class="text-xs text-white/40 ml-2">{{ conv.other_participant.get_role_display }}</span>
+                                            {% else %}
+                                                Group Conversation
+                                                <span class="text-xs text-white/40 ml-2">{{ conv.participant_count }} participants</span>
+                                            {% endif %}
+                                        </h4>
+                                        <span class="text-xs text-white/40">{{ conv.last_message_time|timesince }} ago</span>
+                                    </div>
+                                    
+                                    <p class="text-sm {% if not conv.is_read %}text-white/90{% else %}text-white/60{% endif %} mt-1 truncate">
+                                        {% if conv.last_message %}
+                                            {{ conv.last_message.content|truncatechars:80 }}
                                         {% else %}
-                                            Group Conversation
+                                            <span class="italic">No messages yet</span>
                                         {% endif %}
-                                        {% if conv.unread_count > 0 %}
-                                        <span class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ conv.unread_count }}</span>
+                                    </p>
+                                    
+                                    <!-- Message Meta -->
+                                    <div class="flex items-center mt-1 space-x-3">
+                                        {% if conv.has_attachment %}
+                                        <span class="text-xs text-white/40">
+                                            <i class="fas fa-paperclip mr-1"></i>1
+                                        </span>
                                         {% endif %}
-                                    </h4>
-                                    <span class="text-xs text-white/40">{{ conv.updated_at|timesince }} ago</span>
-                                </div>
-                                {% if conv.last_message %}
-                                <p class="text-sm text-white/80 mt-1">{{ conv.last_message.content|truncatechars:60 }}</p>
-                                {% else %}
-                                <p class="text-sm text-white/40 mt-1">No messages yet</p>
-                                {% endif %}
-                                <p class="text-xs text-white/40 mt-1">{{ conv.participant_count }} participants</p>
+                                        
+                                        {% if conv.is_important %}
+                                        <span class="text-xs text-red-400">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if conv.labels %}
+                                        <div class="flex space-x-1">
+                                            {% for label in conv.labels %}
+                                            <span class="text-xs px-2 py-0.5 rounded-full bg-{{ label.color }}-500/20 text-{{ label.color }}-400">
+                                                {{ label.name }}
+                                            </span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </a>
                             </div>
+                            
+                            <!-- Unread Indicator -->
+                            {% if not conv.is_read %}
+                            <div class="flex-shrink-0 ml-2 w-2 h-2 bg-blue-400 rounded-full mt-3"></div>
+                            {% endif %}
                         </div>
-                    </a>
+                    </div>
                     {% endfor %}
                 </div>
                 {% else %}
+                <!-- Empty State -->
                 <div class="p-12 text-center">
-                    <i class="fas fa-envelope-open text-5xl text-white/40 mb-4"></i>
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+                        <i class="fas fa-envelope-open-text text-4xl text-white/40"></i>
+                    </div>
                     <h3 class="text-xl font-semibold text-white mb-2">No Messages</h3>
-                    <p class="text-white/60 mb-6">Your inbox is empty</p>
+                    <p class="text-white/60 mb-6">Your inbox is empty. Start a conversation!</p>
                     <a href="{% url 'messaging:compose' %}" class="glass-button">
                         <i class="fas fa-pen mr-2"></i>Compose First Message
                     </a>
                 </div>
                 {% endif %}
             </div>
+            
+            <!-- Pagination -->
+            {% if conversations.has_other_pages %}
+            <div class="mt-6 flex justify-center">
+                <nav class="flex space-x-2">
+                    {% if conversations.has_previous %}
+                    <a href="?page={{ conversations.previous_page_number }}" class="glass-button">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    <span class="glass-button bg-white/20">
+                        Page {{ conversations.number }} of {{ conversations.paginator.num_pages }}
+                    </span>
+                    
+                    {% if conversations.has_next %}
+                    <a href="?page={{ conversations.next_page_number }}" class="glass-button">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+    // Select all functionality
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.message-checkbox');
+    
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+        });
+    });
+    
+    // Search functionality
+    function filterMessages() {
+        const searchTerm = document.getElementById('searchInput').value;
+        // Implement search logic
+        console.log('Searching for:', searchTerm);
+    }
+    
+    // Real-time search (optional)
+    document.getElementById('searchInput').addEventListener('keyup', debounce(function() {
+        filterMessages();
+    }, 500));
+    
+    function debounce(func, wait) {
+        let timeout;
+        return function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, arguments), wait);
+        };
+    }
+</script>
 {% endblock %}
