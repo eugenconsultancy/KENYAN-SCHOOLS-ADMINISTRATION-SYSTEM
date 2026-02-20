@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Finance Dashboard - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Finance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-file-invoice text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">KSh {{ total_invoiced|floatformat:0 }}</div>
+            <div class="stat-label">Total Invoiced</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave text-2xl text-green-400"></i>
+            </div>
+            <div class="stat-value">KSh {{ total_collected|floatformat:0 }}</div>
+            <div class="stat-label">Total Collected</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-400"></i>
+            </div>
+            <div class="stat-value">KSh {{ outstanding|floatformat:0 }}</div>
+            <div class="stat-label">Outstanding</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-day text-2xl text-blue-400"></i>
+            </div>
+            <div class="stat-value">KSh {{ today_collected|floatformat:0 }}</div>
+            <div class="stat-label">Today's Collections</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Monthly Collections Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Monthly Collections</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="collectionsChart" height="200"></canvas>
+            </div>
+        </div>
+        
+        <!-- Class-wise Collection -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Class-wise Collections</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for class in class_collection %}
+                    <div>
+                        <div class="flex justify-between text-sm text-white/60 mb-1">
+                            <span>{{ class.class }}</span>
+                            <span>KSh {{ class.collected|floatformat:0 }} / KSh {{ class.invoiced|floatformat:0 }}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {% widthratio class.collected class.invoiced 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue Summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Overdue Summary</h3>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-4">
+                    <div class="text-3xl font-bold text-red-400">{{ overdue_invoices }}</div>
+                    <div class="text-sm text-white/60">Overdue Invoices</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white">KSh {{ overdue_amount|floatformat:0 }}</div>
+                    <div class="text-sm text-white/60">Total Overdue Amount</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="glass-card lg:col-span-2">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Recent Payments</h3>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="text-white/60 text-sm">
+                                <th class="px-4 py-2 text-left">Date</th>
+                                <th class="px-4 py-2 text-left">Student</th>
+                                <th class="px-4 py-2 text-left">Admission No.</th>
+                                <th class="px-4 py-2 text-right">Amount</th>
+                                <th class="px-4 py-2 text-center">Method</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in recent_payments %}
+                            <tr class="border-t border-white/10">
+                                <td class="px-4 py-3 text-white">{{ payment.payment_date|date:"d M Y" }}</td>
+                                <td class="px-4 py-3 text-white">{{ payment.student.get_full_name }}</td>
+                                <td class="px-4 py-3 text-white">{{ payment.student.admission_number }}</td>
+                                <td class="px-4 py-3 text-right text-white font-medium">KSh {{ payment.amount|floatformat:0 }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge badge-info">{{ payment.get_payment_method_display }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Defaulters -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Top Defaulters</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">#</th>
+                            <th class="px-4 py-2 text-left">Student Name</th>
+                            <th class="px-4 py-2 text-left">Admission No.</th>
+                            <th class="px-4 py-2 text-right">Outstanding Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for defaulter in top_defaulters %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ forloop.counter }}</td>
+                            <td class="px-4 py-3 text-white">{{ defaulter.student__user__first_name }} {{ defaulter.student__user__last_name }}</td>
+                            <td class="px-4 py-3 text-white">{{ defaulter.student__admission_number }}</td>
+                            <td class="px-4 py-3 text-right text-red-400 font-medium">KSh {{ defaulter.total_balance|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-white/60">
+                                <i class="fas fa-check-circle text-4xl mb-3 text-green-400"></i>
+                                <p>No defaulters! All fees are up to date.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Monthly Collections Chart
+    const collectionsCtx = document.getElementById('collectionsChart').getContext('2d');
+    new Chart(collectionsCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Collections (KSh)',
+                data: {{ monthly_collections|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

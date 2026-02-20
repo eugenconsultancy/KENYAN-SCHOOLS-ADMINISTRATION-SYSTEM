@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Exams - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Examinations{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Actions Bar -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex space-x-2">
+                {% if user.is_teacher or user.is_admin %}
+                <a href="{% url 'academics:exam_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Create Exam
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="flex space-x-2">
+                <select onchange="window.location.href='?term='+this.value" class="glass-input w-auto">
+                    <option value="">All Terms</option>
+                    {% for term in terms %}
+                    <option value="{{ term.id }}" {% if request.GET.term == term.id|stringformat:"i" %}selected{% endif %}>
+                        {{ term }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exams Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for exam in exams %}
+        <div class="glass-card overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <span class="badge 
+                        {% if exam.exam_type == 'endterm' %}badge-error
+                        {% elif exam.exam_type == 'midterm' %}badge-warning
+                        {% elif exam.exam_type == 'cat' %}badge-info
+                        {% else %}badge-success{% endif %}">
+                        {{ exam.get_exam_type_display }}
+                    </span>
+                    {% if exam.is_published %}
+                    <span class="badge badge-success">Published</span>
+                    {% else %}
+                    <span class="badge badge-warning">Draft</span>
+                    {% endif %}
+                </div>
+                
+                <h3 class="text-xl font-semibold text-white mb-2">{{ exam.name }}</h3>
+                
+                <div class="space-y-2 mb-4">
+                    <p class="text-sm text-white/60">
+                        <i class="fas fa-calendar mr-2"></i>
+                        {{ exam.start_date|date:"d M Y" }} - {{ exam.end_date|date:"d M Y" }}
+                    </p>
+                    <p class="text-sm text-white/60">
+                        <i class="fas fa-book mr-2"></i>
+                        {{ exam.subjects.count }} Subjects
+                    </p>
+                    <p class="text-sm text-white/60">
+                        <i class="fas fa-layer-group mr-2"></i>
+                        {{ exam.term }}
+                    </p>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/40">
+                        Created by: {{ exam.created_by.get_full_name|default:"System" }}
+                    </span>
+                    <a href="{% url 'academics:exam_detail' exam.id %}" class="glass-button text-sm">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12">
+            <div class="glass-card p-8">
+                <i class="fas fa-file-alt text-5xl text-white/40 mb-4"></i>
+                <h3 class="text-xl font-semibold text-white mb-2">No Exams Found</h3>
+                <p class="text-white/60 mb-6">No examinations have been created yet.</p>
+                {% if user.is_teacher or user.is_admin %}
+                <a href="{% url 'academics:exam_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Create First Exam
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Basic Information -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Exam Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            Exam Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" 
+                               value="{{ form.name.value|default:'' }}" class="glass-input" 
+                               placeholder="e.g., End of Term 1 Examination" required>
+                        {% if form.name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.exam_type.id_for_label }}" class="form-label">
+                            Exam Type <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.exam_type.name }}" id="{{ form.exam_type.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Exam Type</option>
+                            {% for value, label in form.exam_type.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.exam_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.exam_type.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.exam_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.term.id_for_label }}" class="form-label">
+                            Term <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.term.name }}" id="{{ form.term.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Term</option>
+                            {% for term in form.term.field.queryset %}
+                            <option value="{{ term.id }}" {% if form.term.value == term.id %}selected{% endif %}>
+                                {{ term }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.term.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.term.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Exam Dates -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Exam Dates</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                            Start Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.start_date.name }}" id="{{ form.start_date.id_for_label }}" 
+                               value="{{ form.start_date.value|default:'' }}" class="glass-input" required>
+                        {% if form.start_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.start_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                            End Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.end_date.name }}" id="{{ form.end_date.id_for_label }}" 
+                               value="{{ form.end_date.value|default:'' }}" class="glass-input" required>
+                        {% if form.end_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.end_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Subjects -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Subjects Included</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-white/5 rounded-lg">
+                    {% for choice in form.subjects.field.choices %}
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="{{ form.subjects.name }}" value="{{ choice.0 }}" 
+                               {% if choice.0 in form.subjects.value %}checked{% endif %}
+                               class="form-checkbox h-4 w-4 text-blue-600">
+                        <span class="text-white/80">{{ choice.1 }}</span>
+                    </label>
+                    {% empty %}
+                    <p class="text-white/60 col-span-3">No subjects available. Please create subjects first.</p>
+                    {% endfor %}
+                </div>
+                {% if form.subjects.errors %}
+                <p class="text-sm text-red-400 mt-2">{{ form.subjects.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    Description (Optional)
+                </label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" 
+                          rows="4" class="glass-input">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Publish Status (only for editing) -->
+            {% if exam %}
+            <div>
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" name="{{ form.is_published.name }}" id="{{ form.is_published.id_for_label }}" 
+                           {% if form.is_published.value %}checked{% endif %} class="form-checkbox h-5 w-5 text-blue-600">
+                    <span class="ml-2 text-white">Publish results immediately</span>
+                </label>
+                <p class="text-xs text-white/60 mt-1 ml-7">Published results are visible to students and parents</p>
+            </div>
+            {% endif %}
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% if exam %}{% url 'academics:exam_detail' exam.id %}{% else %}{% url 'academics:exam_list' %}{% endif %}" 
+                   class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if exam %}Update{% else %}Create{% endif %} Exam
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Exam Creation Tips -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Exam Creation Tips</h3>
+        
+        <div class="space-y-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-lightbulb text-blue-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Exam Naming Convention</h4>
+                    <p class="text-sm text-white/60">Use clear, descriptive names like "End of Term 1 Examination 2024" or "Form 3 Mock Examination"</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-calendar-alt text-green-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Exam Dates</h4>
+                    <p class="text-sm text-white/60">Ensure exam dates fall within the selected term's date range</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-book text-purple-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Subject Selection</h4>
+                    <p class="text-sm text-white/60">Select all subjects that will be examined. You can add detailed schedules after creating the exam.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-clock text-yellow-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">After Creation</h4>
+                    <p class="text-sm text-white/60">Add exam schedules, enter results, and generate performance reports</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

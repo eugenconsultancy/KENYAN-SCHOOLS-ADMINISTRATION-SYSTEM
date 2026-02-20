@@ -1,0 +1,80 @@
+<div class="glass-card {% block card_class %}{% endblock %}" {% block card_attrs %}{% endblock %}>
+    {% if title %}
+    <div class="border-b border-white/20 px-6 py-4">
+        <h3 class="text-lg font-semibold text-white">{{ title }}</h3>
+        {% if subtitle %}
+        <p class="text-sm text-white/60">{{ subtitle }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="p-6">
+        {% block card_content %}{% endblock %}
+    </div>
+    
+    {% if footer %}
+    <div class="border-t border-white/20 px-6 py-4">
+        {{ footer }}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Stat card variation */
+.glass-card.stat-card {
+    padding: 1.5rem;
+}
+
+.glass-card.stat-card .stat-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    margin-bottom: 1rem;
+}
+
+.glass-card.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.glass-card.stat-card .stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.glass-card.stat-card .stat-change {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.glass-card.stat-card .stat-change.positive {
+    color: #10b981;
+}
+
+.glass-card.stat-card .stat-change.negative {
+    color: #ef4444;
+}
+</style>

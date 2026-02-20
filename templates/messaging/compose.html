@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compose Message - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Compose Message{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" id="composeForm">
+            {% csrf_token %}
+            
+            <!-- Recipient Selection -->
+            <div class="mb-6">
+                <label class="form-label">Recipient Type</label>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                    <button type="button" class="recipient-type-btn glass-button text-sm" data-type="individual">
+                        <i class="fas fa-user mr-1"></i>Individual
+                    </button>
+                    <button type="button" class="recipient-type-btn glass-button text-sm" data-type="all_students">
+                        <i class="fas fa-user-graduate mr-1"></i>All Students
+                    </button>
+                    <button type="button" class="recipient-type-btn glass-button text-sm" data-type="all_teachers">
+                        <i class="fas fa-chalkboard-teacher mr-1"></i>All Teachers
+                    </button>
+                    <button type="button" class="recipient-type-btn glass-button text-sm" data-type="class">
+                        <i class="fas fa-users mr-1"></i>Specific Class
+                    </button>
+                </div>
+            </div>
+
+            <!-- Individual Recipients (Hidden by default) -->
+            <div id="individualSection" class="hidden mb-4">
+                <label class="form-label">Select Recipients</label>
+                <select name="recipients" class="glass-input select2" multiple style="width: 100%">
+                    {% for user in form.recipients.field.queryset %}
+                    <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.get_role_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Class Selection (Hidden by default) -->
+            <div id="classSection" class="hidden mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="form-label">Class Level</label>
+                        <select name="class_level" class="glass-input">
+                            <option value="">Select Class</option>
+                            {% for value, label in form.class_level.field.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Stream</label>
+                        <select name="stream" class="glass-input">
+                            <option value="">Select Stream</option>
+                            {% for value, label in form.stream.field.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden field for recipient type -->
+            <input type="hidden" name="recipient_type" id="recipientType">
+
+            <!-- Message Subject -->
+            <div class="mb-4">
+                <label class="form-label">Subject (Optional)</label>
+                <input type="text" name="subject" class="glass-input" placeholder="Enter message subject">
+            </div>
+
+            <!-- Message Content -->
+            <div class="mb-4">
+                <label class="form-label">Message</label>
+                <textarea name="content" rows="6" class="glass-input" required placeholder="Type your message here..."></textarea>
+            </div>
+
+            <!-- Attachment -->
+            <div class="mb-6">
+                <label class="form-label">Attachment (Optional)</label>
+                <input type="file" name="attachment" class="glass-input">
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'messaging:inbox' %}" class="glass-button">Cancel</a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-paper-plane mr-2"></i>Send Message
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Template Selection Modal -->
+<div id="templateModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-2xl w-full p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Select Template</h3>
+        <div class="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto mb-4">
+            {% for template in templates %}
+            <div class="template-item glass-card p-3 cursor-pointer" data-id="{{ template.id }}">
+                <h4 class="font-medium text-white">{{ template.name }}</h4>
+                <p class="text-xs text-white/60">{{ template.template_type }}</p>
+                <p class="text-sm text-white/80 mt-1 truncate">{{ template.subject }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="flex justify-end">
+            <button type="button" onclick="closeTemplateModal()" class="glass-button">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Select recipients",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Recipient type selection
+    document.querySelectorAll('.recipient-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.dataset.type;
+            document.getElementById('recipientType').value = type;
+            
+            // Hide all sections
+            document.getElementById('individualSection').classList.add('hidden');
+            document.getElementById('classSection').classList.add('hidden');
+            
+            // Show relevant section
+            if (type === 'individual') {
+                document.getElementById('individualSection').classList.remove('hidden');
+            } else if (type === 'class') {
+                document.getElementById('classSection').classList.remove('hidden');
+            }
+            
+            // Update button styles
+            document.querySelectorAll('.recipient-type-btn').forEach(b => {
+                b.classList.remove('bg-blue-600/50');
+            });
+            this.classList.add('bg-blue-600/50');
+        });
+    });
+
+    function openTemplateModal() {
+        document.getElementById('templateModal').classList.remove('hidden');
+        document.getElementById('templateModal').classList.add('flex');
+    }
+
+    function closeTemplateModal() {
+        document.getElementById('templateModal').classList.add('hidden');
+        document.getElementById('templateModal').classList.remove('flex');
+    }
+
+    // Template selection
+    document.querySelectorAll('.template-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const templateId = this.dataset.id;
+            fetch(`{% url 'messaging:template_preview' 0 %}`.replace('0', templateId))
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('input[name="subject"]').value = data.subject;
+                    document.querySelector('textarea[name="content"]').value = data.content;
+                    closeTemplateModal();
+                });
+        });
+    });
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--multiple {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+    }
+    .select2-container--classic .select2-selection--multiple .select2-selection__choice {
+        background-color: rgba(59, 130, 246, 0.5);
+        border: none;
+        color: white;
+    }
+</style>
+{% endblock %}

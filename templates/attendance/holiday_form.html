@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if holiday %}Edit{% else %}Create{% endif %} Holiday - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if holiday %}Edit Holiday{% else %}Create New Holiday{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Holiday Information -->
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                        Holiday Name <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" 
+                           value="{{ form.name.value|default:'' }}" 
+                           class="glass-input" 
+                           placeholder="e.g., Madaraka Day, Good Friday"
+                           required>
+                    {% if form.name.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.holiday_type.id_for_label }}" class="form-label">
+                            Holiday Type <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.holiday_type.name }}" id="{{ form.holiday_type.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Type</option>
+                            {% for value, label in form.holiday_type.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.holiday_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.holiday_type.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.holiday_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.date.id_for_label }}" class="form-label">
+                            Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.date.name }}" id="{{ form.date.id_for_label }}" 
+                               value="{{ form.date.value|default:'' }}" 
+                               class="glass-input" 
+                               required>
+                        {% if form.date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                        Description
+                    </label>
+                    <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" 
+                              rows="4" class="glass-input" 
+                              placeholder="Provide additional details about this holiday...">{{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center">
+                    <label for="{{ form.is_recurring.id_for_label }}" class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="{{ form.is_recurring.name }}" id="{{ form.is_recurring.id_for_label }}" 
+                               {% if form.is_recurring.value %}checked{% endif %} 
+                               class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">This is a recurring holiday (occurs every year)</span>
+                    </label>
+                </div>
+                {% if form.is_recurring.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.is_recurring.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Holiday Information Panel -->
+            <div class="bg-blue-500/10 rounded-lg p-4 mt-4">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    Holiday Information
+                </h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>Public holidays are automatically applied to all attendance records</li>
+                    <li>School holidays can be set for specific terms</li>
+                    <li>Recurring holidays will automatically appear each year</li>
+                    <li>Holidays override regular attendance marking</li>
+                </ul>
+            </div>
+            
+            <!-- Recent Holidays Preview -->
+            {% if recent_holidays %}
+            <div class="border-t border-white/20 pt-4">
+                <h4 class="text-white font-medium mb-3">Recent Holidays (for reference)</h4>
+                <div class="space-y-2 max-h-40 overflow-y-auto">
+                    {% for h in recent_holidays %}
+                    <div class="text-sm text-white/60">
+                        <span class="text-white">{{ h.date|date:"d M Y" }}</span> - {{ h.name }}
+                        <span class="badge badge-info text-xs ml-2">{{ h.get_holiday_type_display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'attendance:holiday_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if holiday %}Update{% else %}Create{% endif %} Holiday
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Kenyan Public Holidays Reference -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Kenyan Public Holidays Reference</h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">New Year's Day - Jan 1</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Good Friday - (Variable)</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Easter Monday - (Variable)</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Labour Day - May 1</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Madaraka Day - June 1</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Mashujaa Day - Oct 20</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Jamhuri Day - Dec 12</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Christmas Day - Dec 25</div>
+            <div class="bg-white/5 rounded p-2 text-sm text-white/80">Boxing Day - Dec 26</div>
+        </div>
+        
+        <p class="text-xs text-white/40 mt-4">
+            <i class="fas fa-info-circle mr-1"></i>
+            Variable dates (like Easter) need to be set manually each year
+        </p>
+    </div>
+</div>
+
+<script>
+    // Validate date is not too far in the past
+    document.getElementById('{{ form.date.id_for_label }}').addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        const fiveYearsAgo = new Date();
+        fiveYearsAgo.setFullYear(today.getFullYear() - 5);
+        
+        if (selectedDate < fiveYearsAgo) {
+            alert('Warning: You are setting a holiday more than 5 years in the past. Please verify the date is correct.');
+        }
+    });
+    
+    // Preview recurring holiday message
+    const recurringCheckbox = document.getElementById('{{ form.is_recurring.id_for_label }}');
+    recurringCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            // Show recurring info
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400';
+            infoDiv.id = 'recurring-info';
+            infoDiv.innerHTML = '<i class="fas fa-redo-alt mr-2"></i>This holiday will automatically repeat every year.';
+            
+            // Remove existing if any
+            const existing = document.getElementById('recurring-info');
+            if (existing) existing.remove();
+            
+            this.closest('.flex').after(infoDiv);
+        } else {
+            const existing = document.getElementById('recurring-info');
+            if (existing) existing.remove();
+        }
+    });
+</script>
+{% endblock %}

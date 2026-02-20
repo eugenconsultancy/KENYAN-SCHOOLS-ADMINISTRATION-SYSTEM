@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if attendance %}Edit{% else %}Mark{% endif %} Attendance - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if attendance %}Edit Attendance Record{% else %}Mark Student Attendance{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="attendanceForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Student Information (Read-only if editing) -->
+            {% if attendance %}
+            <div class="bg-white/5 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-3">Student Information</h4>
+                <div class="flex items-center">
+                    <img src="{{ attendance.student.user.get_profile_picture }}" alt="{{ attendance.student.get_full_name }}" 
+                         class="h-12 w-12 rounded-full object-cover border-2 border-white mr-3">
+                    <div>
+                        <p class="text-white font-medium">{{ attendance.student.get_full_name }}</p>
+                        <p class="text-sm text-white/60">Admission: {{ attendance.student.admission_number }} | Form {{ attendance.class_level }} {{ attendance.stream }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="space-y-4">
+                <!-- Student Selection (for new attendance) -->
+                {% if not attendance %}
+                <div>
+                    <label for="{{ form.student.id_for_label }}" class="form-label">
+                        Student <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.student.name }}" id="studentSelect" class="glass-input" required>
+                        <option value="">Select Student</option>
+                        {% for student in form.student.field.queryset %}
+                        <option value="{{ student.id }}" {% if form.student.value == student.id %}selected{% endif %}>
+                            {{ student.get_full_name }} ({{ student.admission_number }}) - Form {{ student.current_class }} {{ student.stream }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.student.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.student.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Date and Session -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.date.id_for_label }}" class="form-label">
+                            Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.date.name }}" id="dateField" 
+                               value="{{ form.date.value|default:today|date:'Y-m-d' }}" 
+                               class="glass-input" required max="{{ today|date:'Y-m-d' }}">
+                        {% if form.date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.session.id_for_label }}" class="form-label">
+                            Session
+                        </label>
+                        <select name="{{ form.session.name }}" id="sessionSelect" class="glass-input">
+                            <option value="">Select Session (Optional)</option>
+                            {% for session in form.session.field.queryset %}
+                            <option value="{{ session.id }}" {% if form.session.value == session.id %}selected{% endif %}>
+                                {{ session.name }} ({{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.session.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.session.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Attendance Status -->
+                <div>
+                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                        Attendance Status <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.status.name }}" id="statusSelect" class="glass-input" required>
+                        <option value="">Select Status</option>
+                        {% for value, label in form.status.field.choices %}
+                            {% if value %}
+                            <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.status.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Time Fields (shown for present/late) -->
+                <div id="timeFields" class="grid grid-cols-1 md:grid-cols-2 gap-4 {% if form.status.value != 'present' and form.status.value != 'late' %}hidden{% endif %}">
+                    <div>
+                        <label for="{{ form.check_in_time.id_for_label }}" class="form-label">
+                            Check In Time
+                        </label>
+                        <input type="time" name="{{ form.check_in_time.name }}" id="checkInTime" 
+                               value="{{ form.check_in_time.value|default:current_time|time:'H:i' }}" 
+                               class="glass-input">
+                        {% if form.check_in_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.check_in_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.check_out_time.id_for_label }}" class="form-label">
+                            Check Out Time
+                        </label>
+                        <input type="time" name="{{ form.check_out_time.name }}" id="checkOutTime" 
+                               value="{{ form.check_out_time.value|default:'' }}" 
+                               class="glass-input">
+                        {% if form.check_out_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.check_out_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Reason Field (shown for absent/late/excused/sick) -->
+                <div id="reasonField" class="{% if form.status.value != 'absent' and form.status.value != 'late' and form.status.value != 'excused' and form.status.value != 'sick' %}hidden{% endif %}">
+                    <label for="{{ form.reason.id_for_label }}" class="form-label">
+                        Reason
+                    </label>
+                    <textarea name="{{ form.reason.name }}" id="reasonField" rows="3" 
+                              class="glass-input" placeholder="Please provide reason for {{ form.status.value|default:'absence' }}">{{ form.reason.value|default:'' }}</textarea>
+                    {% if form.reason.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.reason.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="mt-6 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-bolt text-yellow-400 mr-2"></i>
+                    Quick Actions
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="setStatus('present')" class="glass-button text-sm py-2">
+                        <i class="fas fa-check-circle mr-1"></i>Present
+                    </button>
+                    <button type="button" onclick="setStatus('absent')" class="glass-button text-sm py-2">
+                        <i class="fas fa-times-circle mr-1"></i>Absent
+                    </button>
+                    <button type="button" onclick="setStatus('late')" class="glass-button text-sm py-2">
+                        <i class="fas fa-clock mr-1"></i>Late
+                    </button>
+                    <button type="button" onclick="setStatus('excused')" class="glass-button text-sm py-2">
+                        <i class="fas fa-check-double mr-1"></i>Excused
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-white/20">
+                <a href="{% if attendance %}{% url 'attendance:student_attendance' attendance.student.id %}{% else %}{% url 'attendance:attendance_dashboard' %}{% endif %}" 
+                   class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-green-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if attendance %}Update{% else %}Save{% endif %} Attendance
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Information Panel -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Attendance Guidelines</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-2">
+                <h4 class="text-white font-medium text-sm">Status Meanings:</h4>
+                <ul class="text-sm text-white/60 space-y-1">
+                    <li><span class="badge badge-success mr-2">Present</span> Student attended on time</li>
+                    <li><span class="badge badge-error mr-2">Absent</span> Student did not attend</li>
+                    <li><span class="badge badge-warning mr-2">Late</span> Student arrived after start time</li>
+                    <li><span class="badge badge-info mr-2">Excused</span> Valid reason provided in advance</li>
+                    <li><span class="badge badge-info mr-2">Sick</span> Medical absence</li>
+                </ul>
+            </div>
+            
+            <div class="space-y-2">
+                <h4 class="text-white font-medium text-sm">Late Policy:</h4>
+                <ul class="text-sm text-white/60 space-y-1 list-disc list-inside">
+                    <li>More than 15 minutes late = Late</li>
+                    <li>More than 2 hours late = Absent</li>
+                    <li>3 late arrivals = 1 absence</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide fields based on status
+    const statusSelect = document.getElementById('statusSelect');
+    const timeFields = document.getElementById('timeFields');
+    const reasonField = document.getElementById('reasonField');
+    
+    function updateFields() {
+        const status = statusSelect.value;
+        
+        // Time fields for present/late
+        if (status === 'present' || status === 'late') {
+            timeFields.classList.remove('hidden');
+        } else {
+            timeFields.classList.add('hidden');
+        }
+        
+        // Reason field for absent/late/excused/sick
+        if (status === 'absent' || status === 'late' || status === 'excused' || status === 'sick') {
+            reasonField.classList.remove('hidden');
+        } else {
+            reasonField.classList.add('hidden');
+        }
+        
+        // Set default reason placeholder
+        const reasonTextarea = document.querySelector('textarea[name="reason"]');
+        if (reasonTextarea) {
+            if (status === 'absent') {
+                reasonTextarea.placeholder = 'Please provide reason for absence';
+            } else if (status === 'late') {
+                reasonTextarea.placeholder = 'Please provide reason for lateness';
+            } else if (status === 'sick') {
+                reasonTextarea.placeholder = 'Please provide medical details';
+            } else if (status === 'excused') {
+                reasonTextarea.placeholder = 'Please provide reason for excused absence';
+            }
+        }
+    }
+    
+    statusSelect.addEventListener('change', updateFields);
+    
+    // Quick status buttons
+    function setStatus(status) {
+        statusSelect.value = status;
+        updateFields();
+        
+        // Auto-fill check-in time for present/late
+        if (status === 'present' || status === 'late') {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('checkInTime').value = `${hours}:${minutes}`;
+        }
+        
+        // Scroll to form
+        document.getElementById('attendanceForm').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Initialize on page load
+    updateFields();
+    
+    // Validate date is not in future
+    document.getElementById('dateField').addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > today) {
+            alert('Cannot mark attendance for future dates');
+            this.value = today.toISOString().split('T')[0];
+        }
+    });
+    
+    // Student search enhancement (if not using Select2)
+    {% if not attendance %}
+    const studentSelect = document.getElementById('studentSelect');
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search students...';
+    searchInput.className = 'glass-input mb-2';
+    searchInput.onkeyup = function() {
+        const filter = this.value.toLowerCase();
+        const options = studentSelect.options;
+        for (let i = 0; i < options.length; i++) {
+            const text = options[i].text.toLowerCase();
+            options[i].style.display = text.includes(filter) ? '' : 'none';
+        }
+    };
+    studentSelect.parentNode.insertBefore(searchInput, studentSelect);
+    {% endif %}
+</script>
+{% endblock %}

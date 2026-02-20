@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Basic Information -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Class Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.class_level.id_for_label }}" class="form-label">
+                            Class Level <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.class_level.name }}" id="{{ form.class_level.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Class Level</option>
+                            {% for value, label in form.class_level.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.class_level.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.class_level.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.class_level.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.stream.id_for_label }}" class="form-label">
+                            Stream <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.stream.name }}" id="{{ form.stream.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Stream</option>
+                            {% for value, label in form.stream.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.stream.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.stream.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.stream.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.academic_year.id_for_label }}" class="form-label">
+                            Academic Year <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.academic_year.name }}" id="{{ form.academic_year.id_for_label }}" 
+                                class="glass-input" required>
+                            <option value="">Select Academic Year</option>
+                            {% for year in form.academic_year.field.queryset %}
+                            <option value="{{ year.id }}" {% if form.academic_year.value == year.id %}selected{% endif %}>
+                                {{ year.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.academic_year.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.academic_year.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.class_teacher.id_for_label }}" class="form-label">
+                            Class Teacher
+                        </label>
+                        <select name="{{ form.class_teacher.name }}" id="{{ form.class_teacher.id_for_label }}" 
+                                class="glass-input">
+                            <option value="">Select Class Teacher (Optional)</option>
+                            {% for teacher in form.class_teacher.field.queryset %}
+                            <option value="{{ teacher.id }}" {% if form.class_teacher.value == teacher.id %}selected{% endif %}>
+                                {{ teacher.get_full_name }} ({{ teacher.employee_number }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.class_teacher.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.class_teacher.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.capacity.id_for_label }}" class="form-label">
+                            Class Capacity <span class="text-red-400">*</span>
+                        </label>
+                        <input type="number" name="{{ form.capacity.name }}" id="{{ form.capacity.id_for_label }}" 
+                               value="{{ form.capacity.value|default:'45' }}" class="glass-input" min="1" max="100" required>
+                        {% if form.capacity.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.capacity.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Class Summary (for editing) -->
+            {% if class_obj %}
+            <div class="border-t border-white/20 pt-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Current Class Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white/5 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-white">{{ class_obj.get_student_count }}</div>
+                        <div class="text-sm text-white/60">Enrolled Students</div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-white">{{ class_obj.capacity }}</div>
+                        <div class="text-sm text-white/60">Total Capacity</div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-{% if class_obj.get_capacity_percentage >= 90 %}red{% elif class_obj.get_capacity_percentage >= 75 %}yellow{% else %}green{% endif %}-400">
+                            {{ class_obj.get_capacity_percentage|floatformat:1 }}%
+                        </div>
+                        <div class="text-sm text-white/60">Utilization</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% if class_obj %}{% url 'academics:class_detail' class_obj.id %}{% else %}{% url 'academics:class_list' %}{% endif %}" 
+                   class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if class_obj %}Update{% else %}Create{% endif %} Class
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Help Section -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Class Management Information</h3>
+        
+        <div class="space-y-3 text-sm text-white/80">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Each class is uniquely identified by its level, stream, and academic year.</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>The class teacher will have form master responsibilities for this class.</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Class capacity determines the maximum number of students that can be enrolled.</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Subjects must be allocated separately after creating the class.</p>
+        </div>
+        
+        {% if not class_obj %}
+        <div class="mt-4 p-4 bg-blue-500/10 rounded-lg">
+            <h4 class="text-white font-medium mb-2">Next Steps After Creating Class:</h4>
+            <ol class="list-decimal list-inside text-sm text-white/80 space-y-1">
+                <li>Allocate subjects to the class</li>
+                <li>Assign teachers to each subject</li>
+                <li>Create the class timetable</li>
+                <li>Enroll students in the class</li>
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

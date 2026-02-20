@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.get_full_name }} - Student Details{% endblock %}
+
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Profile Header -->
+    <div class="glass-card overflow-hidden mb-6">
+        <div class="h-32 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+        <div class="px-6 py-4 relative">
+            <div class="flex flex-col sm:flex-row items-center sm:items-end -mt-16">
+                <div class="relative">
+                    <img src="{{ student.user.get_profile_picture }}" 
+                         alt="{{ student.get_full_name }}" 
+                         class="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg">
+                </div>
+                <div class="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left flex-1">
+                    <h2 class="text-2xl font-bold text-white">{{ student.get_full_name }}</h2>
+                    <p class="text-white/80">Admission: {{ student.admission_number }} | KCPE: {{ student.kcpe_index }}</p>
+                    <p class="text-white/60 text-sm">Form {{ student.current_class }} {{ student.stream }} | {{ student.get_boarding_status_display }}</p>
+                </div>
+                <div class="mt-4 sm:mt-0 flex gap-2">
+                    <a href="{% url 'students:edit' student.id %}" class="glass-button">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </a>
+                    <a href="{% url 'students:transfer' student.id %}" class="glass-button">
+                        <i class="fas fa-exchange-alt mr-2"></i>Transfer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ attendance_percentage|floatformat:1 }}%</div>
+            <div class="text-sm text-white/60">Attendance Rate</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ average|default:"0.0" }}</div>
+            <div class="text-sm text-white/60">Average Score</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">KSh {{ total_paid|floatformat:0 }}</div>
+            <div class="text-sm text-white/60">Total Paid</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white {% if outstanding_balance > 0 %}text-red-400{% else %}text-green-400{% endif %}">
+                KSh {{ outstanding_balance|floatformat:0 }}
+            </div>
+            <div class="text-sm text-white/60">Balance</div>
+        </div>
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column - Personal Info -->
+        <div class="space-y-6">
+            <!-- Personal Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Personal Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Full Name</dt>
+                            <dd class="text-sm text-white">{{ student.get_full_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Date of Birth</dt>
+                            <dd class="text-sm text-white">{{ student.date_of_birth|date:"d M Y" }} ({{ student.get_age }} years)</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Gender</dt>
+                            <dd class="text-sm text-white">{{ student.get_gender_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">KCPE Marks</dt>
+                            <dd class="text-sm text-white">{{ student.kcpe_marks }}/500</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Admission Year</dt>
+                            <dd class="text-sm text-white">{{ student.year_of_admission }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Contact Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Phone</dt>
+                            <dd class="text-sm text-white">{{ student.phone_number|default:"Not provided" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Alternative</dt>
+                            <dd class="text-sm text-white">{{ student.alternative_phone|default:"Not provided" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Email</dt>
+                            <dd class="text-sm text-white">{{ student.email|default:"Not provided" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Address</dt>
+                            <dd class="text-sm text-white">{{ student.physical_address|default:"Not provided" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Parent Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Parent/Guardian</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Name</dt>
+                            <dd class="text-sm text-white">{{ student.parent_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Phone</dt>
+                            <dd class="text-sm text-white">{{ student.parent_phone }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Email</dt>
+                            <dd class="text-sm text-white">{{ student.parent_email|default:"Not provided" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Occupation</dt>
+                            <dd class="text-sm text-white">{{ student.parent_occupation|default:"Not provided" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Emergency Contact -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Emergency Contact</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Name</dt>
+                            <dd class="text-sm text-white">{{ student.emergency_contact_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Phone</dt>
+                            <dd class="text-sm text-white">{{ student.emergency_contact_phone }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Relationship</dt>
+                            <dd class="text-sm text-white">{{ student.emergency_contact_relationship }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Middle Column - Academic & Activities -->
+        <div class="space-y-6">
+            <!-- Recent Results -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Recent Results</h3>
+                    <a href="{% url 'students:results' student.id %}" class="text-sm text-white/60 hover:text-white">
+                        View All <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if results %}
+                    <div class="space-y-3">
+                        {% for result in results %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm font-medium text-white">{{ result.subject.name }}</p>
+                                <p class="text-xs text-white/60">{{ result.term }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-bold text-white">{{ result.marks }}</span>
+                                <span class="text-xs text-white/60 ml-1">{{ result.get_grade_display }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No results available</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Clubs -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Clubs & Societies</h3>
+                </div>
+                <div class="p-6">
+                    {% if clubs %}
+                    <div class="space-y-2">
+                        {% for club in clubs %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-white">{{ club.name }}</span>
+                            <span class="text-xs badge badge-info">{{ club.position }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">Not a member of any club</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Sports -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Sports</h3>
+                </div>
+                <div class="p-6">
+                    {% if sports %}
+                    <div class="space-y-2">
+                        {% for sport in sports %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-white">{{ sport.name }}</span>
+                            <span class="text-xs badge badge-success">{{ sport.position }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">Not participating in any sports</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Notes & Documents -->
+        <div class="space-y-6">
+            <!-- Quick Actions -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Quick Actions</h3>
+                </div>
+                <div class="p-6 grid grid-cols-2 gap-3">
+                    <a href="{% url 'students:attendance' student.id %}" class="glass-button text-center">
+                        <i class="fas fa-calendar-check mb-1"></i>
+                        <span class="text-xs">Attendance</span>
+                    </a>
+                    <a href="{% url 'students:subjects' student.id %}" class="glass-button text-center">
+                        <i class="fas fa-book mb-1"></i>
+                        <span class="text-xs">Subjects</span>
+                    </a>
+                    <a href="{% url 'students:documents' student.id %}" class="glass-button text-center">
+                        <i class="fas fa-file mb-1"></i>
+                        <span class="text-xs">Documents</span>
+                    </a>
+                    <a href="{% url 'finance:student_fees' student.id %}" class="glass-button text-center">
+                        <i class="fas fa-money-bill mb-1"></i>
+                        <span class="text-xs">Fees</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Recent Notes -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Recent Notes</h3>
+                    <button onclick="openNoteModal()" class="text-white/60 hover:text-white">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    {% if notes %}
+                    <div class="space-y-4">
+                        {% for note in notes %}
+                        <div class="border-l-4 {% if note.note_type == 'disciplinary' %}border-red-500{% elif note.note_type == 'achievement' %}border-green-500{% else %}border-blue-500{% endif %} pl-3">
+                            <p class="text-sm font-medium text-white">{{ note.title }}</p>
+                            <p class="text-xs text-white/60 mb-1">{{ note.created_at|date:"d M Y" }} by {{ note.created_by.get_full_name }}</p>
+                            <p class="text-sm text-white/80">{{ note.content|truncatechars:100 }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No notes available</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Documents -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Documents</h3>
+                    <a href="{% url 'students:document_upload' student.id %}" class="text-white/60 hover:text-white">
+                        <i class="fas fa-upload"></i>
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if documents %}
+                    <div class="space-y-2">
+                        {% for doc in documents|slice:":5" %}
+                        <div class="flex justify-between items-center">
+                            <a href="{{ doc.file.url }}" target="_blank" class="text-sm text-white/80 hover:text-white">
+                                <i class="fas fa-file-{% if doc.document_type == 'birth_cert' %}contract{% else %}alt{% endif %} mr-2"></i>
+                                {{ doc.title }}
+                            </a>
+                            <span class="text-xs text-white/60">{{ doc.uploaded_at|date:"d M Y" }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if documents.count > 5 %}
+                    <div class="mt-3 text-center">
+                        <a href="{% url 'students:documents' student.id %}" class="text-sm text-white/60 hover:text-white">
+                            View all {{ documents.count }} documents
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-center text-white/60">No documents uploaded</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div id="noteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+    <div class="glass-modal max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Add Note</h3>
+        <form method="post" action="{% url 'students:add_note' student.id %}">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="form-label">Note Type</label>
+                    <select name="note_type" class="glass-input" required>
+                        <option value="general">General</option>
+                        <option value="academic">Academic</option>
+                        <option value="behavior">Behavior</option>
+                        <option value="achievement">Achievement</option>
+                        <option value="disciplinary">Disciplinary</option>
+                        <option value="medical">Medical</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="glass-input" required>
+                </div>
+                <div>
+                    <label class="form-label">Content</label>
+                    <textarea name="content" rows="4" class="glass-input" required></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeNoteModal()" class="glass-button">Cancel</button>
+                <button type="submit" class="glass-button bg-blue-600/50">Save Note</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openNoteModal() {
+        document.getElementById('noteModal').classList.remove('hidden');
+    }
+    
+    function closeNoteModal() {
+        document.getElementById('noteModal').classList.add('hidden');
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('noteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeNoteModal();
+        }
+    });
+</script>
+{% endblock %}

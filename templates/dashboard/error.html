@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Error - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Error{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+    <div class="max-w-md w-full text-center">
+        <div class="glass-card p-8">
+            <div class="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-red-400 text-3xl"></i>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-white mb-3">Profile Error</h2>
+            
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                <p class="text-red-400">
+                    {{ error_message|default:"Your user profile could not be found." }}
+                </p>
+            </div>
+            
+            <p class="text-white/60 mb-6">
+                Please contact the school administrator to resolve this issue.
+            </p>
+            
+            <div class="space-y-3">
+                <a href="{% url 'dashboard:home' %}" class="glass-button w-full">
+                    <i class="fas fa-home mr-2"></i>Go to Home
+                </a>
+                
+                <a href="{% url 'accounts:logout' %}" class="inline-block text-sm text-white/60 hover:text-white">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

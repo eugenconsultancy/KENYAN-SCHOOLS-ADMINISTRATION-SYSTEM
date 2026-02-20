@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="{{ form.teacher.id_for_label }}" class="form-label">
+                        Teacher <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.teacher.name }}" id="{{ form.teacher.id_for_label }}" class="glass-input" required>
+                        <option value="">Select Teacher</option>
+                        {% for teacher in form.teacher.field.queryset %}
+                        <option value="{{ teacher.id }}" {% if form.teacher.value == teacher.id %}selected{% endif %}>
+                            {{ teacher.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="{{ form.term.id_for_label }}" class="form-label">
+                        Term <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.term.name }}" id="{{ form.term.id_for_label }}" class="glass-input" required>
+                        <option value="">Select Term</option>
+                        {% for term in form.term.field.queryset %}
+                        <option value="{{ term.id }}" {% if form.term.value == term.id %}selected{% endif %}>
+                            {{ term }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <h3 class="text-lg font-semibold text-white mb-4">Performance Ratings (1-5)</h3>
+            <p class="text-sm text-white/60 mb-4">1 = Poor, 2 = Fair, 3 = Good, 4 = Very Good, 5 = Excellent</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="form-label">Lesson Preparation</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.lesson_preparation.name }}" value="{{ i }}" 
+                                   {% if form.lesson_preparation.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Lesson Delivery</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.lesson_delivery.name }}" value="{{ i }}" 
+                                   {% if form.lesson_delivery.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Student Assessment</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.student_assessment.name }}" value="{{ i }}" 
+                                   {% if form.student_assessment.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Class Management</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.class_management.name }}" value="{{ i }}" 
+                                   {% if form.class_management.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Punctuality</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.punctuality.name }}" value="{{ i }}" 
+                                   {% if form.punctuality.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Professional Conduct</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.professional_conduct.name }}" value="{{ i }}" 
+                                   {% if form.professional_conduct.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">Co-curricular Activities</label>
+                    <div class="flex space-x-2">
+                        {% for i in "12345"|make_list %}
+                        <label class="flex-1">
+                            <input type="radio" name="{{ form.co_curricular.name }}" value="{{ i }}" 
+                                   {% if form.co_curricular.value == i %}checked{% endif %} class="hidden peer">
+                            <div class="text-center p-3 bg-white/5 rounded-lg peer-checked:bg-blue-600/50 cursor-pointer">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <label for="{{ form.comments.id_for_label }}" class="form-label">
+                    Comments
+                </label>
+                <textarea name="{{ form.comments.name }}" id="{{ form.comments.id_for_label }}" 
+                          rows="4" class="glass-input">{{ form.comments.value|default:'' }}</textarea>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'teachers:performance_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>Save Evaluation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

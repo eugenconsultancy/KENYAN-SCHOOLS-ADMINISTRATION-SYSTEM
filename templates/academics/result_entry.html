@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Enter Results - {{ exam.name }}{% endblock %}
+
+{% block page_title %}Enter Results: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Exam Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">{{ exam.name }}</h2>
+                <p class="text-white/60">{{ exam.term }} | {{ exam.get_exam_type_display }}</p>
+                {% if class_obj %}
+                <p class="text-white/80 mt-2">Class: Form {{ class_obj.class_level }} {{ class_obj.stream }}</p>
+                {% endif %}
+            </div>
+            <div class="flex space-x-2">
+                <a href="{% url 'academics:result_bulk_upload' exam.id %}" class="glass-button">
+                    <i class="fas fa-upload mr-2"></i>Bulk Upload
+                </a>
+                <a href="{% url 'academics:exam_detail' exam.id %}" class="glass-button">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Exam
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Selection (if no class specified) -->
+    {% if not class_obj %}
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Select Class</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for level in "1234"|make_list %}
+                {% for stream in "East,West,North,South"|split:"," %}
+                <a href="{% url 'academics:result_entry_class' exam.id level stream %}" 
+                   class="glass-button text-center py-3">
+                    Form {{ level }} {{ stream }}
+                </a>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if class_obj and students %}
+    <!-- Result Entry Form -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Enter Marks - Form {{ class_obj.class_level }} {{ class_obj.stream }}</h3>
+            <p class="text-white/60 text-sm mt-1">Double-click on any cell to edit</p>
+        </div>
+        
+        <form method="post" id="resultForm">
+            {% csrf_token %}
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full" id="resultsTable">
+                    <thead>
+                        <tr class="bg-white/10">
+                            <th class="px-4 py-3 text-left text-white font-semibold sticky left-0 bg-white/10">#</th>
+                            <th class="px-4 py-3 text-left text-white font-semibold sticky left-12 bg-white/10">Admission No.</th>
+                            <th class="px-4 py-3 text-left text-white font-semibold sticky left-36 bg-white/10">Student Name</th>
+                            {% for subject in subjects %}
+                            <th class="px-4 py-3 text-center text-white font-semibold min-w-[100px]">
+                                {{ subject.code }}<br>
+                                <span class="text-xs text-white/60">Max: {{ subject.max_mark }}</span>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="border-t border-white/10 hover:bg-white/5">
+                            <td class="px-4 py-3 text-white sticky left-0 bg-[#1a1a2e]">{{ forloop.counter }}</td>
+                            <td class="px-4 py-3 text-white sticky left-12 bg-[#1a1a2e]">{{ student.admission_number }}</td>
+                            <td class="px-4 py-3 text-white sticky left-36 bg-[#1a1a2e]">{{ student.get_full_name }}</td>
+                            {% for subject in subjects %}
+                            <td class="px-4 py-3 text-center">
+                                {% with key=student.id|stringformat:"i"|add:"_"|add:subject.id|stringformat:"i" %}
+                                <input type="number" 
+                                       name="marks_{{ student.id }}_{{ subject.id }}"
+                                       value="{% if existing_results|get_item:key %}{{ existing_results|get_item:key.marks }}{% endif %}"
+                                       class="glass-input w-20 text-center mx-auto"
+                                       min="0"
+                                       max="{{ subject.max_mark }}"
+                                       step="0.01"
+                                       onchange="validateMarks(this, {{ subject.max_mark }})">
+                                {% endwith %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="px-6 py-4 border-t border-white/20 flex justify-between items-center">
+                <div class="text-white/60 text-sm">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Enter marks for {{ students|length }} students in {{ subjects|length }} subjects
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" onclick="resetForm()" class="glass-button">
+                        <i class="fas fa-undo mr-2"></i>Reset
+                    </button>
+                    <button type="submit" class="glass-button bg-green-600/50">
+                        <i class="fas fa-save mr-2"></i>Save All Results
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Fill Options -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Quick Fill Options</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button type="button" onclick="fillAll(0)" class="glass-button">
+                Clear All
+            </button>
+            <button type="button" onclick="fillAll(100)" class="glass-button">
+                Fill All 100
+            </button>
+            <button type="button" onclick="fillAll(75)" class="glass-button">
+                Fill All 75
+            </button>
+            <button type="button" onclick="fillAll(50)" class="glass-button">
+                Fill All 50
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function validateMarks(input, max) {
+        let value = parseFloat(input.value);
+        if (isNaN(value)) {
+            input.value = '';
+        } else if (value < 0) {
+            input.value = 0;
+        } else if (value > max) {
+            input.value = max;
+            alert(`Marks cannot exceed ${max}`);
+        }
+    }
+
+    function fillAll(value) {
+        if (!confirm(`Are you sure you want to fill all marks with ${value}?`)) {
+            return;
+        }
+        
+        const inputs = document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            const max = parseInt(input.max);
+            input.value = Math.min(value, max);
+        });
+    }
+
+    function resetForm() {
+        if (!confirm('Reset all marks? This cannot be undone.')) {
+            return;
+        }
+        
+        const inputs = document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            input.value = '';
+        });
+    }
+
+    // Auto-save functionality
+    let autoSaveTimer;
+    document.getElementById('resultForm').addEventListener('input', function() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(function() {
+            // Show auto-save indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'fixed bottom-4 right-4 glass-card p-3 text-sm text-white';
+            indicator.innerHTML = '<i class="fas fa-save mr-2"></i>Auto-saving...';
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => {
+                indicator.remove();
+            }, 2000);
+        }, 2000);
+    });
+
+    // Keyboard navigation
+    document.querySelectorAll('input[type="number"]').forEach((input, index) => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const inputs = document.querySelectorAll('input[type="number"]');
+                const nextIndex = index + 1;
+                if (nextIndex < inputs.length) {
+                    inputs[nextIndex].focus();
+                }
+            }
+        });
+    });
+</script>
+
+<style>
+    .sticky {
+        position: sticky;
+        z-index: 10;
+    }
+    .sticky.left-0 {
+        left: 0;
+    }
+    .sticky.left-12 {
+        left: 3rem;
+    }
+    .sticky.left-36 {
+        left: 9rem;
+    }
+</style>
+{% endblock %}

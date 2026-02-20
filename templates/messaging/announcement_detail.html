@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ announcement.title }} - Announcement{% endblock %}
+
+{% block page_title %}Announcement Details{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6 mb-4">
+        <a href="{% url 'messaging:announcement_list' %}" class="inline-flex items-center text-white/60 hover:text-white mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Announcements
+        </a>
+        
+        <div class="flex items-center space-x-2 mb-4">
+            <span class="badge 
+                {% if announcement.priority == 'urgent' %}badge-error
+                {% elif announcement.priority == 'high' %}badge-warning
+                {% elif announcement.priority == 'normal' %}badge-info
+                {% else %}badge-success{% endif %}">
+                {{ announcement.get_priority_display }}
+            </span>
+            <span class="badge badge-info">{{ announcement.get_audience_display }}</span>
+            {% if announcement.is_active %}
+            <span class="badge badge-success">Active</span>
+            {% else %}
+            <span class="badge badge-error">Expired</span>
+            {% endif %}
+        </div>
+        
+        <h1 class="text-3xl font-bold text-white mb-4">{{ announcement.title }}</h1>
+        
+        <div class="flex items-center text-sm text-white/60 space-x-4 mb-6">
+            <span>
+                <i class="fas fa-user mr-1"></i>
+                Posted by {{ announcement.created_by.get_full_name }}
+            </span>
+            <span>
+                <i class="fas fa-calendar mr-1"></i>
+                {{ announcement.publish_date|date:"d M Y H:i" }}
+            </span>
+            {% if announcement.expiry_date %}
+            <span>
+                <i class="fas fa-clock mr-1"></i>
+                Expires: {{ announcement.expiry_date|date:"d M Y" }}
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="prose prose-invert max-w-none">
+            {{ announcement.content|linebreaks }}
+        </div>
+        
+        {% if announcement.attachment %}
+        <div class="mt-6 p-4 bg-white/5 rounded-lg">
+            <h4 class="text-sm font-medium text-white/80 mb-2">Attachment</h4>
+            <a href="{{ announcement.attachment.url }}" target="_blank" class="inline-flex items-center text-white/80 hover:text-white">
+                <i class="fas fa-paperclip mr-2"></i>
+                {{ announcement.attachment.name|slice:"14:" }}
+                <i class="fas fa-download ml-2 text-sm"></i>
+            </a>
+        </div>
+        {% endif %}
+        
+        <div class="mt-6 pt-6 border-t border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-white/60">
+                    <i class="fas fa-eye mr-1"></i>
+                    Viewed by {{ announcement.read_by.count }} people
+                </div>
+                
+                {% if user.is_admin or user == announcement.created_by %}
+                <div class="flex space-x-2">
+                    <a href="{% url 'messaging:announcement_edit' announcement.id %}" class="glass-button">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </a>
+                    <a href="{% url 'messaging:announcement_delete' announcement.id %}" class="glass-button bg-red-600/50">
+                        <i class="fas fa-trash mr-2"></i>Delete
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

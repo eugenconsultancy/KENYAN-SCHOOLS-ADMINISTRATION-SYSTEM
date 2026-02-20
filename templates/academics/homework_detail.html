@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ homework.title }} - Homework{% endblock %}
+
+{% block page_title %}Homework: {{ homework.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Homework Details -->
+        <div class="lg:col-span-2">
+            <div class="glass-card p-6 mb-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="badge badge-info mb-2">{{ homework.subject.name }}</span>
+                        <h2 class="text-2xl font-bold text-white">{{ homework.title }}</h2>
+                    </div>
+                    {% if user.is_teacher and user.teacher_profile == homework.teacher %}
+                    <a href="{% url 'academics:homework_edit' homework.id %}" class="glass-button">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                        <div class="text-sm text-white/60">Class</div>
+                        <div class="text-lg font-semibold text-white">
+                            Form {{ homework.class_assigned.class_level }} {{ homework.class_assigned.stream }}
+                        </div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                        <div class="text-sm text-white/60">Due Date</div>
+                        <div class="text-lg font-semibold text-white {% if homework.due_date < today %}text-red-400{% endif %}">
+                            {{ homework.due_date|date:"d M Y" }}
+                        </div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                        <div class="text-sm text-white/60">Assigned By</div>
+                        <div class="text-lg font-semibold text-white">{{ homework.teacher.get_full_name }}</div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                        <div class="text-sm text-white/60">Status</div>
+                        <div class="text-lg font-semibold">
+                            {% if homework.due_date < today %}
+                            <span class="badge badge-error">Overdue</span>
+                            {% elif homework.is_submitted %}
+                            <span class="badge badge-success">Closed</span>
+                            {% else %}
+                            <span class="badge badge-info">Open</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prose prose-invert max-w-none mb-6">
+                    <h4 class="text-white font-semibold mb-2">Description</h4>
+                    <p class="text-white/80">{{ homework.description|linebreaks }}</p>
+                </div>
+                
+                {% if homework.attachments %}
+                <div class="border-t border-white/20 pt-4">
+                    <h4 class="text-white font-semibold mb-2">Attachments</h4>
+                    <a href="{{ homework.attachments.url }}" target="_blank" class="inline-flex items-center text-white/80 hover:text-white">
+                        <i class="fas fa-paperclip mr-2"></i>
+                        {{ homework.attachments.name|slice:"14:" }}
+                        <i class="fas fa-download ml-2"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Submissions (for teachers) -->
+            {% if submissions %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Student Submissions</h3>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="text-white/60 text-sm">
+                                    <th class="px-4 py-2 text-left">Student</th>
+                                    <th class="px-4 py-2 text-left">Submitted</th>
+                                    <th class="px-4 py-2 text-center">Marks</th>
+                                    <th class="px-4 py-2 text-left">Feedback</th>
+                                    <th class="px-4 py-2 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for submission in submissions %}
+                                <tr class="border-t border-white/10">
+                                    <td class="px-4 py-3 text-white">{{ submission.student.get_full_name }}</td>
+                                    <td class="px-4 py-3 text-white">{{ submission.submission_date|date:"d M Y H:i" }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        {% if submission.marks %}
+                                        <span class="font-bold text-white">{{ submission.marks }}</span>
+                                        {% else %}
+                                        <span class="text-white/40">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-white">{{ submission.feedback|default:"-"|truncatechars:30 }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a href="{% url 'academics:homework_grade' submission.id %}" class="text-white/60 hover:text-white">
+                                            <i class="fas fa-check-circle"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar - Student Submission -->
+        <div>
+            {% if user.is_student %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Your Submission</h3>
+                </div>
+                <div class="p-6">
+                    {% if submission %}
+                        <div class="bg-green-500/20 rounded-lg p-4 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-green-400 text-2xl mr-3"></i>
+                                <div>
+                                    <p class="font-medium text-white">Submitted</p>
+                                    <p class="text-xs text-white/60">{{ submission.submission_date|date:"d M Y H:i" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if submission.content %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-white/80 mb-2">Your Answer</h4>
+                            <p class="text-white/80 bg-white/5 rounded-lg p-3">{{ submission.content }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if submission.attachment %}
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-white/80 mb-2">Attachment</h4>
+                            <a href="{{ submission.attachment.url }}" target="_blank" class="inline-flex items-center text-white/80 hover:text-white">
+                                <i class="fas fa-file mr-2"></i>
+                                {{ submission.attachment.name|slice:"14:" }}
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if submission.marks %}
+                        <div class="border-t border-white/20 pt-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-white/60">Marks</span>
+                                <span class="text-2xl font-bold text-white">{{ submission.marks }}</span>
+                            </div>
+                            {% if submission.feedback %}
+                            <div class="mt-2">
+                                <span class="text-white/60">Feedback:</span>
+                                <p class="text-white/80 mt-1">{{ submission.feedback }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        {% if homework.due_date >= today %}
+                        <div class="text-center">
+                            <i class="fas fa-clock text-4xl text-white/40 mb-3"></i>
+                            <p class="text-white/60 mb-4">You haven't submitted this homework yet.</p>
+                            <a href="{% url 'academics:homework_submit' homework.id %}" class="glass-button w-full">
+                                <i class="fas fa-upload mr-2"></i>Submit Homework
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-times-circle text-4xl text-red-400 mb-3"></i>
+                            <p class="text-white/60">Submission deadline has passed.</p>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Class Info -->
+            <div class="glass-card mt-6">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Class Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Class</dt>
+                            <dd class="text-sm text-white">Form {{ homework.class_assigned.class_level }} {{ homework.class_assigned.stream }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Subject</dt>
+                            <dd class="text-sm text-white">{{ homework.subject.name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Teacher</dt>
+                            <dd class="text-sm text-white">{{ homework.teacher.get_full_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Total Students</dt>
+                            <dd class="text-sm text-white">{{ homework.class_assigned.get_student_count }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

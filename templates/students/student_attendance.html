@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.get_full_name }} - Attendance{% endblock %}
+
+{% block page_title %}Attendance History: {{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Student Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <img src="{{ student.user.get_profile_picture }}" alt="{{ student.get_full_name }}" 
+                     class="h-16 w-16 rounded-full object-cover border-2 border-white">
+            </div>
+            <div class="ml-4">
+                <h2 class="text-2xl font-bold text-white">{{ student.get_full_name }}</h2>
+                <p class="text-white/80">Admission: {{ student.admission_number }} | Form {{ student.current_class }} {{ student.stream }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ total_days }}</div>
+            <div class="text-sm text-white/60">Total Days</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-green-400">{{ present_days }}</div>
+            <div class="text-sm text-white/60">Present</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-red-400">{{ absent_days }}</div>
+            <div class="text-sm text-white/60">Absent</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-yellow-400">{{ late_days }}</div>
+            <div class="text-sm text-white/60">Late</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-blue-400">{{ excused_days }}</div>
+            <div class="text-sm text-white/60">Excused</div>
+        </div>
+    </div>
+
+    <!-- Attendance Rate Gauge -->
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Attendance Rate</h3>
+        </div>
+        <div class="p-6">
+            <div class="flex items-center">
+                <div class="w-48 h-48 relative">
+                    <canvas id="attendanceGauge" width="200" height="200"></canvas>
+                </div>
+                <div class="ml-8 flex-1">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-white/60">Overall Attendance</span>
+                                <span class="text-white font-medium">{{ attendance_percentage|floatformat:1 }}%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: {{ attendance_percentage }}%"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm text-white/60">Present</div>
+                                <div class="text-xl font-bold text-green-400">{{ present_days }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-white/60">Absent</div>
+                                <div class="text-xl font-bold text-red-400">{{ absent_days }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-white/60">Late</div>
+                                <div class="text-xl font-bold text-yellow-400">{{ late_days }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-white/60">Excused</div>
+                                <div class="text-xl font-bold text-blue-400">{{ excused_days }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Summaries -->
+    {% if summaries %}
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Monthly Summary</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {% for summary in summaries %}
+                <div class="bg-white/5 rounded-lg p-3 text-center">
+                    <div class="text-sm font-medium text-white/80">{{ summary.month }}/{{ summary.year }}</div>
+                    <div class="text-xl font-bold text-white mt-1">{{ summary.attendance_percentage|floatformat:1 }}%</div>
+                    <div class="text-xs text-white/60">{{ summary.present_days }}/{{ summary.total_days }} days</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter Form -->
+    <div class="glass-card p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="glass-input" value="{{ request.GET.start_date }}">
+            </div>
+            <div>
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="glass-input" value="{{ request.GET.end_date }}">
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="glass-button">
+                    <i class="fas fa-filter mr-2"></i>Filter
+                </button>
+                <a href="{% url 'students:student_attendance' student.id %}" class="glass-button">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Attendance History Table -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-white">Attendance History</h3>
+            <a href="{% url 'reports:student_attendance_report' student.id %}" class="glass-button text-sm">
+                <i class="fas fa-download mr-2"></i>Download Report
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-left">Day</th>
+                            <th class="px-4 py-2 text-center">Status</th>
+                            <th class="px-4 py-2 text-center">Check In</th>
+                            <th class="px-4 py-2 text-center">Check Out</th>
+                            <th class="px-4 py-2 text-left">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ record.date|date:"d M Y" }}</td>
+                            <td class="px-4 py-3 text-white">{{ record.date|date:"l" }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="badge 
+                                    {% if record.status == 'present' %}badge-success
+                                    {% elif record.status == 'absent' %}badge-error
+                                    {% elif record.status == 'late' %}badge-warning
+                                    {% else %}badge-info{% endif %}">
+                                    {{ record.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-white">
+                                {% if record.check_in_time %}{{ record.check_in_time|time:"H:i" }}{% else %}-{% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center text-white">
+                                {% if record.check_out_time %}{{ record.check_out_time|time:"H:i" }}{% else %}-{% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-white">{{ record.reason|default:"-"|truncatechars:30 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-white/60">
+                                <i class="fas fa-calendar-times text-4xl mb-3"></i>
+                                <p>No attendance records found</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Attendance Gauge Chart
+    const gaugeCtx = document.getElementById('attendanceGauge').getContext('2d');
+    new Chart(gaugeCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [{{ attendance_percentage }}, {{ 100|add:"-attendance_percentage" }}],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(255, 99, 132, 0.2)'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.raw.toFixed(1) + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

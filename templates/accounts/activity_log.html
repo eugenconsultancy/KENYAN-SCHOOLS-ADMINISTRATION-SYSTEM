@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Activity Log - Kenyan Schools System{% endblock %}
+
+{% block page_title %}My Activity Log{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Activity Timeline -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recent Activities</h3>
+        </div>
+        <div class="p-6">
+            <div class="space-y-6">
+                {% for log in page_obj %}
+                <div class="flex">
+                    <div class="flex-shrink-0 mr-4">
+                        <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                            <i class="fas 
+                                {% if log.action == 'CREATE' %}fa-plus-circle text-green-400
+                                {% elif log.action == 'UPDATE' %}fa-edit text-blue-400
+                                {% elif log.action == 'DELETE' %}fa-trash text-red-400
+                                {% elif log.action == 'LOGIN' %}fa-sign-in-alt text-purple-400
+                                {% elif log.action == 'LOGOUT' %}fa-sign-out-alt text-gray-400
+                                {% else %}fa-circle text-white-400{% endif %}">
+                            </i>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white font-medium">
+                                    {{ log.get_action_display }} - {{ log.model_name }}
+                                </p>
+                                <p class="text-sm text-white/60">{{ log.object_repr }}</p>
+                            </div>
+                            <span class="text-xs text-white/40">{{ log.timestamp|date:"d M Y H:i:s" }}</span>
+                        </div>
+                        {% if log.changes %}
+                        <div class="mt-2 p-3 bg-white/5 rounded-lg">
+                            <pre class="text-xs text-white/80">{{ log.changes|pprint }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <i class="fas fa-history text-4xl text-white/40 mb-3"></i>
+                    <p class="text-white/60">No activity logs found.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="mt-6 flex justify-center">
+                <nav class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="glass-button">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    <span class="glass-button bg-white/20">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="glass-button">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

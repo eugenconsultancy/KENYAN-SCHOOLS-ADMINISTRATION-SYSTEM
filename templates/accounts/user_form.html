@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Profile Picture -->
+            <div class="text-center mb-6">
+                <div class="relative inline-block">
+                    {% if form.instance.pk and form.instance.profile_picture %}
+                        <img src="{{ form.instance.profile_picture.url }}" alt="Profile" 
+                             class="h-32 w-32 rounded-full object-cover border-4 border-white">
+                    {% else %}
+                        <div class="h-32 w-32 rounded-full bg-white/10 flex items-center justify-center border-4 border-white">
+                            <i class="fas fa-user text-4xl text-white/60"></i>
+                        </div>
+                    {% endif %}
+                    <label for="{{ form.profile_picture.id_for_label }}" class="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-camera text-white"></i>
+                    </label>
+                </div>
+                <input type="file" name="{{ form.profile_picture.name }}" id="{{ form.profile_picture.id_for_label }}" class="hidden" accept="image/*">
+                {% if form.profile_picture.errors %}
+                <p class="text-sm text-red-400 mt-2">{{ form.profile_picture.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- User Information -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">User Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            Username <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" 
+                               value="{{ form.username.value|default:'' }}" class="glass-input" required>
+                        {% if form.username.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                        {% if not form.instance.pk %}
+                        <p class="text-xs text-white/60 mt-1">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            Email <span class="text-red-400">*</span>
+                        </label>
+                        <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" 
+                               value="{{ form.email.value|default:'' }}" class="glass-input" required>
+                        {% if form.email.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                            First Name
+                        </label>
+                        <input type="text" name="{{ form.first_name.name }}" id="{{ form.first_name.id_for_label }}" 
+                               value="{{ form.first_name.value|default:'' }}" class="glass-input">
+                        {% if form.first_name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                            Last Name
+                        </label>
+                        <input type="text" name="{{ form.last_name.name }}" id="{{ form.last_name.id_for_label }}" 
+                               value="{{ form.last_name.value|default:'' }}" class="glass-input">
+                        {% if form.last_name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.role.id_for_label }}" class="form-label">
+                            Role <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.role.name }}" id="{{ form.role.id_for_label }}" class="glass-input" required>
+                            <option value="">Select Role</option>
+                            {% for value, label in form.role.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.role.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.role.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                            Phone Number
+                        </label>
+                        <input type="text" name="{{ form.phone_number.name }}" id="{{ form.phone_number.id_for_label }}" 
+                               value="{{ form.phone_number.value|default:'' }}" class="glass-input">
+                        {% if form.phone_number.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.phone_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Password Fields (only shown for new users or when changing password) -->
+            {% if not form.instance.pk or form.password.field.required %}
+            <div class="border-t border-white/20 pt-6">
+                <h3 class="text-lg font-semibold text-white mb-4">
+                    {% if form.instance.pk %}Change Password{% else %}Password{% endif %}
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">
+                            Password {% if not form.instance.pk %}<span class="text-red-400">*</span>{% endif %}
+                        </label>
+                        <input type="password" name="{{ form.password1.name }}" id="{{ form.password1.id_for_label }}" 
+                               class="glass-input" {% if not form.instance.pk %}required{% endif %}>
+                        {% if form.password1.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.password1.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.password1.help_text %}
+                        <p class="text-xs text-white/60 mt-1">{{ form.password1.help_text }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">
+                            Confirm Password {% if not form.instance.pk %}<span class="text-red-400">*</span>{% endif %}
+                        </label>
+                        <input type="password" name="{{ form.password2.name }}" id="{{ form.password2.id_for_label }}" 
+                               class="glass-input" {% if not form.instance.pk %}required{% endif %}>
+                        {% if form.password2.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.password2.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Additional Information -->
+            <div class="border-t border-white/20 pt-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Additional Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.id_number.id_for_label }}" class="form-label">
+                            ID Number
+                        </label>
+                        <input type="text" name="{{ form.id_number.name }}" id="{{ form.id_number.id_for_label }}" 
+                               value="{{ form.id_number.value|default:'' }}" class="glass-input">
+                        {% if form.id_number.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.id_number.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/60 mt-1">National ID/Passport number</p>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.employee_number.id_for_label }}" class="form-label">
+                            Employee Number
+                        </label>
+                        <input type="text" name="{{ form.employee_number.name }}" id="{{ form.employee_number.id_for_label }}" 
+                               value="{{ form.employee_number.value|default:'' }}" class="glass-input">
+                        {% if form.employee_number.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.employee_number.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/60 mt-1">For staff members only</p>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.admission_number.id_for_label }}" class="form-label">
+                            Admission Number
+                        </label>
+                        <input type="text" name="{{ form.admission_number.name }}" id="{{ form.admission_number.id_for_label }}" 
+                               value="{{ form.admission_number.value|default:'' }}" class="glass-input">
+                        {% if form.admission_number.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.admission_number.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/60 mt-1">For students only</p>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="{{ form.address.id_for_label }}" class="form-label">
+                            Physical Address
+                        </label>
+                        <textarea name="{{ form.address.name }}" id="{{ form.address.id_for_label }}" 
+                                  rows="2" class="glass-input">{{ form.address.value|default:'' }}</textarea>
+                        {% if form.address.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.address.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Status -->
+            <div class="border-t border-white/20 pt-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Account Status</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" 
+                               {% if form.is_active.value %}checked{% endif %} class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">Active Account</span>
+                    </label>
+                    <p class="text-xs text-white/60 ml-7">Uncheck to deactivate this user's account</p>
+                    
+                    <label class="flex items-center cursor-pointer mt-2">
+                        <input type="checkbox" name="{{ form.force_password_change.name }}" id="{{ form.force_password_change.id_for_label }}" 
+                               {% if form.force_password_change.value %}checked{% endif %} class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">Force password change on next login</span>
+                    </label>
+                    <p class="text-xs text-white/60 ml-7">User will be required to change password when they next log in</p>
+                </div>
+            </div>
+            
+            <!-- Role-specific information -->
+            {% if form.role.value == 'student' or form.role.value == 'teacher' %}
+            <div class="border-t border-white/20 pt-6">
+                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-400 mt-1 mr-3"></i>
+                        <div>
+                            <p class="text-sm text-white/80">
+                                <strong>Additional profile information</strong> for 
+                                {% if form.role.value == 'student' %}students{% else %}teachers{% endif %} 
+                                can be filled in the respective sections after creating the user account.
+                            </p>
+                            <a href="#" class="text-sm text-blue-400 hover:text-blue-300 mt-2 inline-block">
+                                Go to {% if form.role.value == 'student' %}Students{% else %}Teachers{% endif %} section →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'accounts:user_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}Update{% else %}Create{% endif %} User
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Help Section -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">User Roles Information</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-user-shield text-blue-400 mr-2"></i>Admin
+                </h4>
+                <p class="text-sm text-white/80">Full system access. Can manage users, view all data, and configure system settings.</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-chalkboard-teacher text-green-400 mr-2"></i>Teacher
+                </h4>
+                <p class="text-sm text-white/80">Can mark attendance, enter results, view student information, and communicate with parents.</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-user-graduate text-yellow-400 mr-2"></i>Student
+                </h4>
+                <p class="text-sm text-white/80">Can view own results, attendance, fee statements, and receive messages.</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-user-friends text-purple-400 mr-2"></i>Parent
+                </h4>
+                <p class="text-sm text-white/80">Can view their children's progress, attendance, and fee status.</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-calculator text-red-400 mr-2"></i>Accountant
+                </h4>
+                <p class="text-sm text-white/80">Can manage fees, record payments, generate financial reports.</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-medium text-white mb-2">
+                    <i class="fas fa-book text-indigo-400 mr-2"></i>Librarian
+                </h4>
+                <p class="text-sm text-white/80">Can manage library resources and track book borrowing.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview image before upload
+    document.getElementById('{{ form.profile_picture.id_for_label }}').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.querySelector('.text-center img, .text-center div');
+                if (img.tagName === 'IMG') {
+                    img.src = e.target.result;
+                } else {
+                    // Replace the placeholder div with an image
+                    const container = img.parentNode;
+                    const newImg = document.createElement('img');
+                    newImg.src = e.target.result;
+                    newImg.className = 'h-32 w-32 rounded-full object-cover border-4 border-white';
+                    container.replaceChild(newImg, img);
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Role-based field visibility
+    const roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+    const employeeField = document.getElementById('{{ form.employee_number.id_for_label }}').closest('.md\\:grid-cols-2 > div');
+    const admissionField = document.getElementById('{{ form.admission_number.id_for_label }}').closest('.md\\:grid-cols-2 > div');
+    
+    function toggleRoleFields() {
+        const role = roleSelect.value;
+        
+        if (role === 'teacher' || role === 'admin' || role === 'accountant' || role === 'librarian') {
+            employeeField.style.display = 'block';
+            admissionField.style.display = 'none';
+        } else if (role === 'student') {
+            employeeField.style.display = 'none';
+            admissionField.style.display = 'block';
+        } else {
+            employeeField.style.display = 'none';
+            admissionField.style.display = 'none';
+        }
+    }
+    
+    roleSelect.addEventListener('change', toggleRoleFields);
+    toggleRoleFields(); // Initial call
+</script>
+{% endblock %}

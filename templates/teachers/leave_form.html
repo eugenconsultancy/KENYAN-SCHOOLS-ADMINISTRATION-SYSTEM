@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Request Leave - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Request Leave{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.leave_type.id_for_label }}" class="form-label">
+                        Leave Type <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.leave_type.name }}" id="{{ form.leave_type.id_for_label }}" class="glass-input" required>
+                        <option value="">Select Leave Type</option>
+                        {% for value, label in form.leave_type.field.choices %}
+                            {% if value %}
+                            <option value="{{ value }}" {% if form.leave_type.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.leave_type.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.leave_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                            Start Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.start_date.name }}" id="{{ form.start_date.id_for_label }}" 
+                               value="{{ form.start_date.value|default:'' }}" class="glass-input" required>
+                        {% if form.start_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.start_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                            End Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.end_date.name }}" id="{{ form.end_date.id_for_label }}" 
+                               value="{{ form.end_date.value|default:'' }}" class="glass-input" required>
+                        {% if form.end_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.end_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="leave-days-info" class="bg-white/5 p-4 rounded-lg">
+                    <p class="text-white/80">Leave duration will be calculated automatically</p>
+                </div>
+                
+                <div>
+                    <label for="{{ form.reason.id_for_label }}" class="form-label">
+                        Reason <span class="text-red-400">*</span>
+                    </label>
+                    <textarea name="{{ form.reason.name }}" id="{{ form.reason.id_for_label }}" 
+                              rows="4" class="glass-input" required>{{ form.reason.value|default:'' }}</textarea>
+                    {% if form.reason.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.reason.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-2">Leave Policy Information</h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>Annual leave: 21 working days per year</li>
+                    <li>Sick leave: Medical certificate required for more than 3 days</li>
+                    <li>Maternity leave: 90 days</li>
+                    <li>Paternity leave: 14 days</li>
+                    <li>Compassionate leave: Up to 5 days</li>
+                </ul>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'teachers:leave_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-paper-plane mr-2"></i>Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Calculate leave days automatically
+    const startDate = document.getElementById('{{ form.start_date.id_for_label }}');
+    const endDate = document.getElementById('{{ form.end_date.id_for_label }}');
+    const infoDiv = document.getElementById('leave-days-info');
+    
+    function calculateDays() {
+        if (startDate.value && endDate.value) {
+            const start = new Date(startDate.value);
+            const end = new Date(endDate.value);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            
+            if (end >= start) {
+                infoDiv.innerHTML = `<p class="text-white">Leave duration: <span class="font-bold text-blue-400">${diffDays} day(s)</span></p>`;
+            } else {
+                infoDiv.innerHTML = `<p class="text-red-400">End date must be after start date</p>`;
+            }
+        }
+    }
+    
+    startDate.addEventListener('change', calculateDays);
+    endDate.addEventListener('change', calculateDays);
+</script>
+{% endblock %}

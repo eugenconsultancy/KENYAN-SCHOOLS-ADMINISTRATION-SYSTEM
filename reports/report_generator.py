@@ -1,0 +1,689 @@
+"""
+Base Report Generator Module
+Handles common report generation functionality
+"""
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, letter, landscape
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    Image, PageBreak, KeepTogether
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch, cm
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from reportlab.pdfgen import canvas
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.piecharts import Pie
+from django.utils import timezone
+from django.conf import settings
+from django.db.models import Count, Q, Sum, Avg
+
+import os
+import datetime
+
+class ReportGenerator:
+    """Base class for all report generators"""
+    
+    def __init__(self, title, filename=None):
+        self.title = title
+        self.filename = filename or f"report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        self.styles = getSampleStyleSheet()
+        self.elements = []
+        self._setup_styles()
+        
+        # Create reports directory if it doesn't exist
+        self.reports_dir = os.path.join(settings.MEDIA_ROOT, 'reports')
+        os.makedirs(self.reports_dir, exist_ok=True)
+        
+        self.filepath = os.path.join(self.reports_dir, self.filename)
+    
+    def _setup_styles(self):
+        """Setup custom paragraph styles"""
+        
+        # Title style
+        self.styles.add(ParagraphStyle(
+            name='CustomTitle',
+            parent=self.styles['Heading1'],
+            fontSize=24,
+            alignment=TA_CENTER,
+            spaceAfter=30,
+            textColor=colors.HexColor('#2E4053')
+        ))
+        
+        # Subtitle style
+        self.styles.add(ParagraphStyle(
+            name='CustomSubTitle',
+            parent=self.styles['Heading2'],
+            fontSize=16,
+            alignment=TA_CENTER,
+            spaceAfter=20,
+            textColor=colors.HexColor('#566573')
+        ))
+        
+        # Normal text with better spacing
+        self.styles.add(ParagraphStyle(
+            name='CustomNormal',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            spaceAfter=6,
+            textColor=colors.HexColor('#2C3E50')
+        ))
+        
+        # Right-aligned text
+        self.styles.add(ParagraphStyle(
+            name='RightAlign',
+            parent=self.styles['Normal'],
+            alignment=TA_RIGHT,
+            fontSize=9,
+            textColor=colors.HexColor('#7F8C8D')
+        ))
+        
+        # Header style for tables
+        self.styles.add(ParagraphStyle(
+            name='TableHeader',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            alignment=TA_CENTER,
+            textColor=colors.whitesmoke,
+            fontName='Helvetica-Bold'
+        ))
+    
+    def add_title(self):
+        """Add title to report"""
+        self.elements.append(Paragraph(self.title, self.styles['CustomTitle']))
+        self.elements.append(Spacer(1, 0.2 * inch))
+    
+    def add_subtitle(self, text):
+        """Add subtitle to report"""
+        self.elements.append(Paragraph(text, self.styles['CustomSubTitle']))
+        self.elements.append(Spacer(1, 0.1 * inch))
+    
+    def add_paragraph(self, text, style='CustomNormal'):
+        """Add paragraph to report"""
+        self.elements.append(Paragraph(text, self.styles[style]))
+        self.elements.append(Spacer(1, 0.05 * inch))
+    
+    def add_header_info(self, school_name="Kenyan Schools System", **kwargs):
+        """Add header information (school name, date, etc.)"""
+        
+        data = []
+        
+        # First row: School name
+        data.append([Paragraph(f"<b>{school_name}</b>", self.styles['CustomNormal']), '', ''])
+        
+        # Second row: Report info
+        row2 = []
+        row2.append(Paragraph(f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", self.styles['RightAlign']))
+        row2.append('')
+        if kwargs:
+            row2.append(Paragraph(f"<b>Filters:</b> {', '.join([f'{k}: {v}' for k, v in kwargs.items()])}", self.styles['CustomNormal']))
+        else:
+            row2.append('')
+        
+        data.append(row2)
+        
+        table = Table(data, colWidths=[2.5*inch, 1*inch, 3.5*inch])
+        table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('SPAN', (0, 0), (2, 0)),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ]))
+        
+        self.elements.append(table)
+        self.elements.append(Spacer(1, 0.2 * inch))
+    
+    def add_footer(self):
+        """Add footer with page numbers"""
+        def footer(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(inch, 0.5 * inch, f"Generated by Kenyan Schools System on {timezone.now().strftime('%Y-%m-%d')}")
+            canvas.drawRightString(doc.pagesize[0] - inch, 0.5 * inch, f"Page {doc.page}")
+            canvas.restoreState()
+        
+        return footer
+    
+    def add_table(self, data, col_widths=None, header_row=True):
+        """Add table to report"""
+        
+        if not data:
+            return
+        
+        # Calculate column widths if not provided
+        if not col_widths:
+            page_width = A4[0] - 2*inch
+            col_width = page_width / len(data[0])
+            col_widths = [col_width] * len(data[0])
+        
+        table = Table(data, colWidths=col_widths, repeatRows=1)
+        
+        # Table style
+        style = [
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.lightgrey]),
+        ]
+        
+        if header_row:
+            style.extend([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E4053')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ])
+        
+        table.setStyle(TableStyle(style))
+        
+        self.elements.append(table)
+        self.elements.append(Spacer(1, 0.2 * inch))
+    
+    def add_bar_chart(self, data, labels, title="", width=400, height=200):
+        """Add bar chart to report"""
+        
+        drawing = Drawing(width, height)
+        
+        bc = VerticalBarChart()
+        bc.x = 50
+        bc.y = 50
+        bc.width = width - 100
+        bc.height = height - 80
+        bc.data = data
+        bc.strokeColor = colors.black
+        bc.valueAxis.valueMin = 0
+        bc.valueAxis.valueMax = max([max(d) for d in data]) * 1.1
+        bc.categoryAxis.categoryNames = labels
+        bc.categoryAxis.labels.boxAnchor = 'ne'
+        bc.categoryAxis.labels.dx = 8
+        bc.categoryAxis.labels.dy = -2
+        bc.categoryAxis.labels.angle = 45
+        bc.bars[0].fillColor = colors.HexColor('#3498DB')
+        
+        drawing.add(bc)
+        
+        if title:
+            from reportlab.graphics.shapes import String
+            drawing.add(String(200, height-20, title, fontSize=12))
+        
+        self.elements.append(drawing)
+        self.elements.append(Spacer(1, 0.2 * inch))
+    
+    def add_pie_chart(self, data, labels, title="", width=300, height=200):
+        """Add pie chart to report"""
+        
+        drawing = Drawing(width, height)
+        
+        pc = Pie()
+        pc.x = 100
+        pc.y = 50
+        pc.width = 150
+        pc.height = 150
+        pc.data = data
+        pc.labels = labels
+        pc.slices.strokeWidth = 0.5
+        pc.slices.strokeColor = colors.white
+        
+        # Color scheme
+        colors_list = [
+            colors.HexColor('#3498DB'), colors.HexColor('#E74C3C'),
+            colors.HexColor('#2ECC71'), colors.HexColor('#F39C12'),
+            colors.HexColor('#9B59B6'), colors.HexColor('#1ABC9C'),
+        ]
+        
+        for i, color in enumerate(colors_list):
+            if i < len(pc.slices):
+                pc.slices[i].fillColor = color
+        
+        drawing.add(pc)
+        
+        if title:
+            from reportlab.graphics.shapes import String
+            drawing.add(String(150, height-10, title, fontSize=12))
+        
+        self.elements.append(drawing)
+        self.elements.append(Spacer(1, 0.2 * inch))
+    
+    def add_signature_block(self):
+        """Add signature block at the end of report"""
+        
+        data = [
+            ['', '', ''],
+            ['', '', ''],
+            ['_____________________', '_____________________', '_____________________'],
+            ['Class Teacher', 'Principal', 'Date']
+        ]
+        
+        table = Table(data, colWidths=[2.5*inch, 2.5*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ]))
+        
+        self.elements.append(Spacer(1, 0.5 * inch))
+        self.elements.append(table)
+    
+    def add_page_break(self):
+        """Add page break"""
+        self.elements.append(PageBreak())
+    
+    def generate(self):
+        """Generate the PDF document"""
+        
+        doc = SimpleDocTemplate(
+            self.filepath,
+            pagesize=A4,
+            rightMargin=inch,
+            leftMargin=inch,
+            topMargin=inch,
+            bottomMargin=inch,
+        )
+        
+        doc.build(self.elements, onFirstPage=self.add_footer(), onLaterPages=self.add_footer())
+        
+        return self.filepath
+    
+    @staticmethod
+    def get_recent_reports(user, limit=10):
+        """Get recent reports generated by user"""
+        
+        from .models import GeneratedReport
+        
+        return GeneratedReport.objects.filter(
+            generated_by=user
+        ).order_by('-generated_at')[:limit]
+    
+    @staticmethod
+    def save_report(user, title, report_type, file_path):
+        """Save report record to database"""
+        
+        from .models import GeneratedReport
+        
+        return GeneratedReport.objects.create(
+            title=title,
+            report_type=report_type,
+            file=file_path,
+            generated_by=user
+        )
+
+    @staticmethod
+    def generate_student_profile(student):
+        """Generate comprehensive student profile report"""
+        
+        generator = ReportGenerator(f"Student Profile: {student.get_full_name()}")
+        generator.add_header_info()
+        
+        # Personal Information
+        generator.add_subtitle("Personal Information")
+        personal_data = [
+            ['Admission Number', student.admission_number],
+            ['KCPE Index', student.kcpe_index],
+            ['Date of Birth', student.date_of_birth.strftime('%d/%m/%Y')],
+            ['Gender', student.get_gender_display()],
+            ['Class', student.get_current_class_name()],
+            ['Boarding Status', student.get_boarding_status_display()],
+        ]
+        generator.add_table(personal_data, col_widths=[2*inch, 4*inch])
+        
+        # Contact Information
+        generator.add_subtitle("Contact Information")
+        contact_data = [
+            ['Phone', student.phone_number or 'N/A'],
+            ['Email', student.email or 'N/A'],
+            ['Physical Address', student.physical_address or 'N/A'],
+        ]
+        generator.add_table(contact_data, col_widths=[2*inch, 4*inch])
+        
+        # Parent Information
+        generator.add_subtitle("Parent/Guardian Information")
+        parent_data = [
+            ['Name', student.parent_name],
+            ['Phone', student.parent_phone],
+            ['Email', student.parent_email or 'N/A'],
+            ['Occupation', student.parent_occupation or 'N/A'],
+        ]
+        generator.add_table(parent_data, col_widths=[2*inch, 4*inch])
+        
+        # Academic Summary
+        from academics.models import ResultSummary
+        summaries = ResultSummary.objects.filter(student=student).order_by('-term')[:4]
+        
+        if summaries:
+            generator.add_subtitle("Academic Performance")
+            perf_data = [['Term', 'Average', 'Mean Grade', 'Position']]
+            for s in summaries:
+                perf_data.append([
+                    str(s.term),
+                    f"{s.average:.1f}",
+                    s.mean_grade,
+                    str(s.position_in_class or 'N/A')
+                ])
+            generator.add_table(perf_data)
+        
+        # Attendance Summary
+        from attendance.models import AttendanceSummary
+        attendance = AttendanceSummary.objects.filter(student=student).order_by('-year', '-month')[:6]
+        
+        if attendance:
+            generator.add_subtitle("Attendance Summary")
+            att_data = [['Month/Year', 'Present', 'Absent', 'Late', 'Percentage']]
+            for a in attendance:
+                att_data.append([
+                    f"{a.month}/{a.year}",
+                    str(a.present_days),
+                    str(a.absent_days),
+                    str(a.late_days),
+                    f"{a.attendance_percentage:.1f}%"
+                ])
+            generator.add_table(att_data)
+        
+        generator.add_signature_block()
+        
+        return generator.generate()
+
+    @staticmethod
+    def generate_student_list(students, class_level=None, stream=None):
+        """Generate student list report"""
+        
+        title = "Student List"
+        if class_level:
+            title += f" - Form {class_level}"
+            if stream:
+                title += f" {stream}"
+        
+        generator = ReportGenerator(title)
+        generator.add_header_info()
+        
+        data = [['#', 'Admission No.', 'Student Name', 'Gender', 'Parent Phone', 'Status']]
+        
+        for i, student in enumerate(students, 1):
+            data.append([
+                str(i),
+                student.admission_number,
+                student.get_full_name(),
+                student.get_gender_display(),
+                student.parent_phone,
+                'Active' if student.is_active else 'Inactive'
+            ])
+        
+        generator.add_table(data, col_widths=[0.5*inch, 1.2*inch, 2*inch, 0.8*inch, 1.2*inch, 0.8*inch])
+        
+        # Summary
+        total = students.count()
+        active = students.filter(is_active=True).count()
+        male = students.filter(gender='M').count()
+        female = students.filter(gender='F').count()
+        
+        summary_data = [
+            ['Total Students', str(total)],
+            ['Active Students', str(active)],
+            ['Male', str(male)],
+            ['Female', str(female)],
+        ]
+        
+        generator.add_subtitle("Summary")
+        generator.add_table(summary_data, col_widths=[2*inch, 1*inch])
+        
+        generator.add_signature_block()
+        
+        return generator.generate()
+
+    @staticmethod
+    def generate_teacher_profile(teacher):
+        """Generate comprehensive teacher profile report"""
+        
+        generator = ReportGenerator(f"Teacher Profile: {teacher.get_full_name()}")
+        generator.add_header_info()
+        
+        # Personal Information
+        generator.add_subtitle("Personal Information")
+        personal_data = [
+            ['Employee Number', teacher.employee_number],
+            ['TSC Number', teacher.tsc_number],
+            ['ID Number', teacher.id_number],
+            ['Date of Birth', teacher.date_of_birth.strftime('%d/%m/%Y')],
+            ['Gender', teacher.get_gender_display()],
+            ['Marital Status', teacher.get_marital_status_display()],
+        ]
+        generator.add_table(personal_data, col_widths=[2*inch, 4*inch])
+        
+        # Professional Information
+        generator.add_subtitle("Professional Information")
+        prof_data = [
+            ['Qualification', teacher.get_qualification_level_display()],
+            ['Specialization', teacher.specialization or 'N/A'],
+            ['Years of Experience', str(teacher.years_of_experience)],
+            ['Date Employed', teacher.date_employed.strftime('%d/%m/%Y')],
+            ['Employment Type', teacher.get_employment_type_display()],
+            ['Status', 'Active' if teacher.is_active else 'Inactive'],
+        ]
+        generator.add_table(prof_data, col_widths=[2*inch, 4*inch])
+        
+        # Subjects Taught
+        subjects = teacher.subjects_taught.select_related('subject').all()
+        if subjects:
+            generator.add_subtitle("Subjects Taught")
+            subj_data = [['Subject', 'Code', 'Main Subject']]
+            for s in subjects:
+                subj_data.append([
+                    s.subject.name,
+                    s.subject.code,
+                    'Yes' if s.is_main else 'No'
+                ])
+            generator.add_table(subj_data)
+        
+        # Form Classes
+        form_classes = teacher.form_classes.filter(is_current=True)
+        if form_classes:
+            generator.add_subtitle("Current Form Classes")
+            class_data = [['Class', 'Academic Year']]
+            for fc in form_classes:
+                class_data.append([
+                    f"Form {fc.class_level} {fc.stream}",
+                    str(fc.academic_year)
+                ])
+            generator.add_table(class_data)
+        
+        generator.add_signature_block()
+        
+        return generator.generate()
+
+    @staticmethod
+    def generate_teacher_list(teachers):
+        """Generate teacher list report"""
+        
+        generator = ReportGenerator("Teacher List")
+        generator.add_header_info()
+        
+        data = [['#', 'Employee No.', 'Teacher Name', 'TSC No.', 'Qualification', 'Phone', 'Status']]
+        
+        for i, teacher in enumerate(teachers, 1):
+            data.append([
+                str(i),
+                teacher.employee_number,
+                teacher.get_full_name(),
+                teacher.tsc_number,
+                teacher.get_qualification_level_display(),
+                teacher.phone_number,
+                'Active' if teacher.is_active else 'Inactive'
+            ])
+        
+        generator.add_table(data, col_widths=[0.4*inch, 1*inch, 1.8*inch, 1*inch, 1*inch, 1*inch, 0.8*inch])
+        
+        # Summary
+        total = teachers.count()
+        active = teachers.filter(is_active=True).count()
+        male = teachers.filter(gender='M').count()
+        female = teachers.filter(gender='F').count()
+        
+        summary_data = [
+            ['Total Teachers', str(total)],
+            ['Active Teachers', str(active)],
+            ['Male', str(male)],
+            ['Female', str(female)],
+        ]
+        
+        generator.add_subtitle("Summary")
+        generator.add_table(summary_data, col_widths=[2*inch, 1*inch])
+        
+        generator.add_signature_block()
+        
+        return generator.generate()
+
+    @staticmethod
+    def generate_custom_report(sections, start_date=None, end_date=None, include_charts=True, include_tables=True):
+        """Generate custom report with selected sections"""
+        
+        generator = ReportGenerator("Custom School Report")
+        generator.add_header_info(
+            Period=f"{start_date or 'N/A'} to {end_date or 'N/A'}",
+            Sections=", ".join(sections)
+        )
+        
+        if 'students' in sections:
+            generator.add_subtitle("Student Statistics")
+            from students.models import Student
+            total = Student.objects.count()
+            active = Student.objects.filter(is_active=True).count()
+            male = Student.objects.filter(gender='M').count()
+            female = Student.objects.filter(gender='F').count()
+            
+            data = [
+                ['Metric', 'Value'],
+                ['Total Students', str(total)],
+                ['Active Students', str(active)],
+                ['Male Students', str(male)],
+                ['Female Students', str(female)],
+            ]
+            generator.add_table(data, col_widths=[3*inch, 3*inch])
+            
+            if include_charts:
+                generator.add_pie_chart(
+                    [male, female],
+                    ['Male', 'Female'],
+                    'Student Gender Distribution'
+                )
+        
+        if 'teachers' in sections:
+            generator.add_subtitle("Teacher Statistics")
+            from teachers.models import Teacher
+            total = Teacher.objects.count()
+            active = Teacher.objects.filter(is_active=True).count()
+            male = Teacher.objects.filter(gender='M').count()
+            female = Teacher.objects.filter(gender='F').count()
+            
+            data = [
+                ['Metric', 'Value'],
+                ['Total Teachers', str(total)],
+                ['Active Teachers', str(active)],
+                ['Male Teachers', str(male)],
+                ['Female Teachers', str(female)],
+            ]
+            generator.add_table(data, col_widths=[3*inch, 3*inch])
+            
+            if include_charts:
+                generator.add_pie_chart(
+                    [male, female],
+                    ['Male', 'Female'],
+                    'Teacher Gender Distribution'
+                )
+        
+        if 'academics' in sections:
+            generator.add_subtitle("Academic Performance")
+            from academics.models import Term, Result
+            
+            current_term = Term.objects.filter(is_current=True).first()
+            if current_term:
+                class_averages = []
+                labels = []
+                
+                for level in range(1, 5):
+                    avg = Result.objects.filter(
+                        student__current_class=level,
+                        exam__term=current_term
+                    ).aggregate(Avg('marks'))['marks__avg'] or 0
+                    class_averages.append(avg)
+                    labels.append(f'Form {level}')
+                
+                if include_tables:
+                    data = [['Class', 'Average Score']]
+                    for i, label in enumerate(labels):
+                        data.append([label, f"{class_averages[i]:.1f}"])
+                    generator.add_table(data, col_widths=[3*inch, 3*inch])
+                
+                if include_charts:
+                    generator.add_bar_chart(
+                        [class_averages],
+                        labels,
+                        'Class Performance Comparison'
+                    )
+        
+        if 'finance' in sections:
+            generator.add_subtitle("Financial Summary")
+            from finance.models import Invoice, Payment
+            
+            total_invoiced = Invoice.objects.aggregate(total=Sum('total_amount'))['total'] or 0
+            total_collected = Payment.objects.filter(
+                payment_status='completed'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            if start_date and end_date:
+                collections = Payment.objects.filter(
+                    payment_status='completed',
+                    payment_date__date__gte=start_date,
+                    payment_date__date__lte=end_date
+                )
+            else:
+                collections = Payment.objects.filter(payment_status='completed')
+            
+            period_collected = collections.aggregate(total=Sum('amount'))['total'] or 0
+            
+            data = [
+                ['Metric', 'Amount (KSh)'],
+                ['Total Invoiced', f"{total_invoiced:,.2f}"],
+                ['Total Collected', f"{total_collected:,.2f}"],
+                ['Outstanding', f"{total_invoiced - total_collected:,.2f}"],
+                [f'Period Collections', f"{period_collected:,.2f}"],
+            ]
+            generator.add_table(data, col_widths=[3*inch, 3*inch])
+        
+        if 'attendance' in sections:
+            generator.add_subtitle("Attendance Summary")
+            from attendance.models import Attendance
+            
+            if start_date and end_date:
+                attendance = Attendance.objects.filter(
+                    date__gte=start_date,
+                    date__lte=end_date
+                )
+            else:
+                attendance = Attendance.objects.all()
+            
+            total = attendance.count()
+            present = attendance.filter(status='present').count()
+            absent = attendance.filter(status='absent').count()
+            late = attendance.filter(status='late').count()
+            
+            data = [
+                ['Metric', 'Count', 'Percentage'],
+                ['Total Records', str(total), '100%'],
+                ['Present', str(present), f"{(present/total*100):.1f}%" if total > 0 else '0%'],
+                ['Absent', str(absent), f"{(absent/total*100):.1f}%" if total > 0 else '0%'],
+                ['Late', str(late), f"{(late/total*100):.1f}%" if total > 0 else '0%'],
+            ]
+            generator.add_table(data, col_widths=[2*inch, 1.5*inch, 1.5*inch])
+            
+            if include_charts:
+                generator.add_pie_chart(
+                    [present, absent, late],
+                    ['Present', 'Absent', 'Late'],
+                    'Attendance Distribution'
+                )
+        
+        generator.add_signature_block()
+        
+        return generator.generate()

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inbox - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Messages{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Actions Bar -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex space-x-2">
+                <a href="{% url 'messaging:compose' %}" class="glass-button">
+                    <i class="fas fa-pen mr-2"></i>Compose Message
+                </a>
+                <a href="{% url 'messaging:announcement_list' %}" class="glass-button">
+                    <i class="fas fa-bullhorn mr-2"></i>Announcements
+                </a>
+            </div>
+            
+            <form method="get" class="flex space-x-2">
+                <input type="text" name="search" placeholder="Search messages..." class="glass-input" value="{{ request.GET.search }}">
+                <button type="submit" class="glass-button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="glass-card p-4">
+                <div class="space-y-2">
+                    <a href="{% url 'messaging:inbox' %}" class="block px-4 py-2 rounded-lg bg-white/10 text-white font-medium">
+                        <i class="fas fa-inbox mr-2"></i>Inbox
+                    </a>
+                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
+                        <i class="fas fa-paper-plane mr-2"></i>Sent
+                    </a>
+                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
+                        <i class="fas fa-star mr-2"></i>Starred
+                    </a>
+                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
+                        <i class="fas fa-archive mr-2"></i>Archive
+                    </a>
+                    <a href="#" class="block px-4 py-2 rounded-lg text-white/80 hover:bg-white/10">
+                        <i class="fas fa-trash mr-2"></i>Trash
+                    </a>
+                </div>
+                
+                <div class="border-t border-white/20 my-4 pt-4">
+                    <h4 class="text-sm font-semibold text-white/60 uppercase mb-2">Quick Filters</h4>
+                    <div class="space-y-2">
+                        <a href="#" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <i class="fas fa-envelope mr-2"></i>Unread
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-sm text-white/80 hover:bg-white/10 rounded-lg">
+                            <i class="fas fa-users mr-2"></i>Groups
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message List -->
+        <div class="lg:col-span-3">
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Inbox</h3>
+                </div>
+                
+                {% if conversations %}
+                <div class="divide-y divide-white/10">
+                    {% for conv in conversations %}
+                    <a href="{% url 'messaging:conversation' conv.id %}" class="block px-6 py-4 hover:bg-white/5 transition-colors {% if conv.unread_count > 0 %}bg-white/5{% endif %}">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                {% if conv.other_participant %}
+                                <img src="{{ conv.other_participant.get_profile_picture }}" alt="{{ conv.other_participant.get_full_name }}" class="h-10 w-10 rounded-full object-cover">
+                                {% else %}
+                                <div class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
+                                    <i class="fas fa-users text-white/60"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-sm font-medium text-white">
+                                        {% if conv.other_participant %}
+                                            {{ conv.other_participant.get_full_name|default:conv.other_participant.username }}
+                                        {% else %}
+                                            Group Conversation
+                                        {% endif %}
+                                        {% if conv.unread_count > 0 %}
+                                        <span class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ conv.unread_count }}</span>
+                                        {% endif %}
+                                    </h4>
+                                    <span class="text-xs text-white/40">{{ conv.updated_at|timesince }} ago</span>
+                                </div>
+                                {% if conv.last_message %}
+                                <p class="text-sm text-white/80 mt-1">{{ conv.last_message.content|truncatechars:60 }}</p>
+                                {% else %}
+                                <p class="text-sm text-white/40 mt-1">No messages yet</p>
+                                {% endif %}
+                                <p class="text-xs text-white/40 mt-1">{{ conv.participant_count }} participants</p>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-12 text-center">
+                    <i class="fas fa-envelope-open text-5xl text-white/40 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-white mb-2">No Messages</h3>
+                    <p class="text-white/60 mb-6">Your inbox is empty</p>
+                    <a href="{% url 'messaging:compose' %}" class="glass-button">
+                        <i class="fas fa-pen mr-2"></i>Compose First Message
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

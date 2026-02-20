@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Dashboard - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Welcome Section -->
+    <div class="glass-card p-6 mb-8">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <img src="{{ student.user.get_profile_picture }}" alt="{{ student.get_full_name }}" class="h-16 w-16 rounded-full object-cover border-2 border-white">
+            </div>
+            <div class="ml-4">
+                <h2 class="text-2xl font-bold text-white">Welcome back, {{ student.get_full_name }}!</h2>
+                <p class="text-white/80">Form {{ student.current_class }} {{ student.stream }} | Adm: {{ student.admission_number }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ term_average|default:"0.0" }}</div>
+            <div class="stat-label">Term Average</div>
+            <div class="stat-change">{{ term_subjects }} Subjects</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-check text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ attendance_rate|floatformat:1 }}%</div>
+            <div class="stat-label">Attendance Rate</div>
+            <div class="stat-change">{{ present_days }}/{{ total_days }} Days</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">KSh {{ balance|floatformat:0 }}</div>
+            <div class="stat-label">Fee Balance</div>
+            <div class="stat-change {% if balance > 0 %}negative{% else %}positive{% endif %}">
+                {% if balance > 0 %}Outstanding{% else %}Fully Paid{% endif %}
+            </div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-bell text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ unread_notifications }}</div>
+            <div class="stat-label">Notifications</div>
+            <div class="stat-change">Unread</div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="space-y-6">
+            <!-- Recent Results -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Recent Results</h3>
+                    <a href="{% url 'academics:student_results' student.id %}" class="text-white/60 hover:text-white text-sm">View All</a>
+                </div>
+                <div class="p-6">
+                    {% if recent_results %}
+                    <div class="space-y-4">
+                        {% for result in recent_results %}
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-white">{{ result.subject.name }}</p>
+                                <p class="text-xs text-white/60">{{ result.exam.name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-lg font-bold text-white">{{ result.marks }}</span>
+                                <span class="text-xs text-white/60 ml-1">{{ result.grade }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No results available</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Clubs & Sports -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">My Activities</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        {% if student.clubs.exists %}
+                        <div>
+                            <p class="text-sm font-medium text-white/80 mb-2">Clubs</p>
+                            {% for club in student.clubs.all %}
+                            <span class="badge badge-info mr-2 mb-2">{{ club.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if student.sports.exists %}
+                        <div>
+                            <p class="text-sm font-medium text-white/80 mb-2">Sports</p>
+                            {% for sport in student.sports.all %}
+                            <span class="badge badge-success mr-2 mb-2">{{ sport.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if not student.clubs.exists and not student.sports.exists %}
+                        <p class="text-center text-white/60">Not participating in any activities</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Middle Column -->
+        <div class="space-y-6">
+            <!-- Today's Schedule -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Today's Schedule</h3>
+                </div>
+                <div class="p-6">
+                    {% if today_classes %}
+                    <div class="space-y-4">
+                        {% for class in today_classes %}
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-white">{{ class.subject.name }}</p>
+                                <p class="text-sm text-white/60">Mr./Ms. {{ class.teacher.get_full_name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-white">{{ class.start_time|time:"H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No classes scheduled for today</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Upcoming Exams -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Upcoming Exams</h3>
+                </div>
+                <div class="p-6">
+                    {% if upcoming_exams %}
+                    <div class="space-y-4">
+                        {% for exam in upcoming_exams %}
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-white">{{ exam.name }}</p>
+                                <p class="text-xs text-white/60">{{ exam.get_exam_type_display }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-white">{{ exam.start_date|date:"d M" }}</p>
+                                <p class="text-xs text-white/40">{{ exam.start_date|timeuntil }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No upcoming exams</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column -->
+        <div class="space-y-6">
+            <!-- Announcements -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Announcements</h3>
+                </div>
+                <div class="p-6">
+                    {% if announcements %}
+                    <div class="space-y-4">
+                        {% for announcement in announcements %}
+                        <div class="border-l-4 border-blue-500 pl-3">
+                            <p class="font-medium text-white">{{ announcement.title }}</p>
+                            <p class="text-sm text-white/80">{{ announcement.content|truncatechars:100 }}</p>
+                            <p class="text-xs text-white/40 mt-1">{{ announcement.publish_date|date:"d M Y" }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No announcements</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Quick Links</h3>
+                </div>
+                <div class="p-6 grid grid-cols-2 gap-3">
+                    <a href="{% url 'attendance:student_attendance' student.id %}" class="glass-button text-center py-2 text-sm">
+                        <i class="fas fa-calendar-check mr-1"></i> Attendance
+                    </a>
+                    <a href="{% url 'finance:student_invoices' student.id %}" class="glass-button text-center py-2 text-sm">
+                        <i class="fas fa-money-bill mr-1"></i> Fees
+                    </a>
+                    <a href="{% url 'academics:student_results' student.id %}" class="glass-button text-center py-2 text-sm">
+                        <i class="fas fa-chart-line mr-1"></i> Results
+                    </a>
+                    <a href="{% url 'messaging:compose' %}?user={{ student.user.id }}" class="glass-button text-center py-2 text-sm">
+                        <i class="fas fa-envelope mr-1"></i> Message
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

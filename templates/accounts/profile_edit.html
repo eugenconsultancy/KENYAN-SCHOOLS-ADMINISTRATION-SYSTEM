@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="text-center mb-6">
+                <div class="relative inline-block">
+                    <img src="{{ user.get_profile_picture }}" alt="{{ user.get_full_name }}" 
+                         class="h-32 w-32 rounded-full object-cover border-4 border-white">
+                    <label for="{{ form.profile_picture.id_for_label }}" class="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-camera text-white"></i>
+                    </label>
+                </div>
+                <input type="file" name="{{ form.profile_picture.name }}" id="{{ form.profile_picture.id_for_label }}" class="hidden">
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="{{ form.first_name.name }}" value="{{ form.first_name.value|default:'' }}" class="glass-input">
+                    {% if form.first_name.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="{{ form.last_name.name }}" value="{{ form.last_name.value|default:'' }}" class="glass-input">
+                    {% if form.last_name.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" name="{{ form.phone_number.name }}" value="{{ form.phone_number.value|default:'' }}" class="glass-input">
+                    {% if form.phone_number.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="form-label">Address</label>
+                    <textarea name="{{ form.address.name }}" rows="3" class="glass-input">{{ form.address.value|default:'' }}</textarea>
+                    {% if form.address.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.address.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'accounts:profile' %}" class="glass-button">Cancel</a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Preview image before upload
+    document.getElementById('{{ form.profile_picture.id_for_label }}').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.querySelector('.text-center img').src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock %}

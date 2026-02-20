@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subject Allocation - {{ class_obj }}{% endblock %}
+
+{% block page_title %}Subject Allocation: {{ class_obj }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header with Class Info -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">{{ class_obj }}</h2>
+                <p class="text-white/60">Academic Year: {{ class_obj.academic_year }}</p>
+                <p class="text-white/60">Class Teacher: {{ class_obj.class_teacher.get_full_name|default:"Not Assigned" }}</p>
+            </div>
+            
+            <div class="flex space-x-2">
+                <a href="{% url 'academics:subject_allocation_create' class_obj.id %}" class="glass-button bg-green-600/50">
+                    <i class="fas fa-plus mr-2"></i>Allocate Subject
+                </a>
+                <a href="{% url 'academics:class_detail' class_obj.id %}" class="glass-button">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Class
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Allocations Table -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Subject Allocations</h3>
+        </div>
+        <div class="p-6">
+            {% if allocations %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">#</th>
+                            <th class="px-4 py-2 text-left">Subject</th>
+                            <th class="px-4 py-2 text-left">Subject Code</th>
+                            <th class="px-4 py-2 text-left">Teacher</th>
+                            <th class="px-4 py-2 text-center">Lessons/Week</th>
+                            <th class="px-4 py-2 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for allocation in allocations %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ forloop.counter }}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-medium text-white">{{ allocation.subject.name }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-white">{{ allocation.subject.code }}</td>
+                            <td class="px-4 py-3">
+                                {% if allocation.teacher %}
+                                <div class="flex items-center">
+                                    <img src="{{ allocation.teacher.user.get_profile_picture }}" alt="{{ allocation.teacher.get_full_name }}" class="h-6 w-6 rounded-full object-cover mr-2">
+                                    <span class="text-white">{{ allocation.teacher.get_full_name }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-white/40">Not Assigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center text-white">{{ allocation.lessons_per_week }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <form method="post" action="{% url 'academics:subject_allocation_delete' allocation.id %}" class="inline" onsubmit="return confirm('Remove this subject allocation?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-white/60 hover:text-red-400">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-book-open text-5xl text-white/40 mb-4"></i>
+                <h3 class="text-xl font-semibold text-white mb-2">No Subjects Allocated</h3>
+                <p class="text-white/60 mb-6">No subjects have been allocated to this class yet.</p>
+                <a href="{% url 'academics:subject_allocation_create' class_obj.id %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Allocate First Subject
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    {% if allocations %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ allocations.count }}</div>
+            <div class="text-sm text-white/60">Total Subjects</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">
+                {{ allocations.values|dictsortreversed:"lessons_per_week"|first }}
+            </div>
+            <div class="text-sm text-white/60">Max Lessons/Week</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">
+                {% with total=0 %}
+                {% for allocation in allocations %}
+                    {% with total=total|add:allocation.lessons_per_week %}
+                    {% endwith %}
+                {% endfor %}
+                {{ allocations.aggregate.total|default:0 }}
+                </div>
+            <div class="text-sm text-white/60">Total Lessons/Week</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

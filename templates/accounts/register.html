@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - Kenyan Schools System{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="flex justify-center mb-4">
+                <div class="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user-plus text-blue-400 text-3xl"></i>
+                </div>
+            </div>
+            <h2 class="text-3xl font-extrabold text-white">Create Account</h2>
+            <p class="mt-2 text-sm text-white/60">
+                Or 
+                <a href="{% url 'accounts:login' %}" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                    sign in to existing account
+                </a>
+            </p>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="glass-card p-8">
+            <form class="space-y-6" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert-error p-4 rounded-lg">
+                    {% for error in form.non_field_errors %}
+                    <p class="text-sm">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Account Type Selection -->
+                <div>
+                    <label class="form-label">Account Type <span class="text-red-400">*</span></label>
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <label class="relative">
+                            <input type="radio" name="role" value="student" class="peer hidden" checked>
+                            <div class="glass-card p-4 text-center cursor-pointer peer-checked:bg-blue-600/30 peer-checked:border-blue-400 border-2 border-transparent transition-all">
+                                <i class="fas fa-user-graduate text-2xl text-white/80 peer-checked:text-blue-400"></i>
+                                <p class="text-sm font-medium text-white mt-2">Student</p>
+                            </div>
+                        </label>
+                        <label class="relative">
+                            <input type="radio" name="role" value="parent" class="peer hidden">
+                            <div class="glass-card p-4 text-center cursor-pointer peer-checked:bg-blue-600/30 peer-checked:border-blue-400 border-2 border-transparent transition-all">
+                                <i class="fas fa-user-friends text-2xl text-white/80 peer-checked:text-blue-400"></i>
+                                <p class="text-sm font-medium text-white mt-2">Parent</p>
+                            </div>
+                        </label>
+                    </div>
+                    {% if form.role.errors %}
+                    <p class="text-sm text-red-400 mt-2">{{ form.role.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Personal Information -->
+                <div class="space-y-4">
+                    <h3 class="text-md font-medium text-white/80 border-b border-white/10 pb-2">Personal Information</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                First Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" name="{{ form.first_name.name }}" id="{{ form.first_name.id_for_label }}" 
+                                   value="{{ form.first_name.value|default:'' }}" 
+                                   class="glass-input" 
+                                   placeholder="John"
+                                   required>
+                            {% if form.first_name.errors %}
+                            <p class="text-sm text-red-400 mt-1">{{ form.first_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                Last Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" name="{{ form.last_name.name }}" id="{{ form.last_name.id_for_label }}" 
+                                   value="{{ form.last_name.value|default:'' }}" 
+                                   class="glass-input" 
+                                   placeholder="Doe"
+                                   required>
+                            {% if form.last_name.errors %}
+                            <p class="text-sm text-red-400 mt-1">{{ form.last_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            Username <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-white/40"></i>
+                            </div>
+                            <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" 
+                                   value="{{ form.username.value|default:'' }}" 
+                                   class="glass-input pl-10" 
+                                   placeholder="johndoe"
+                                   required>
+                        </div>
+                        {% if form.username.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/40 mt-1">150 characters or fewer. Letters, digits and @/./+/-/_ only.</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            Email Address <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-white/40"></i>
+                            </div>
+                            <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" 
+                                   value="{{ form.email.value|default:'' }}" 
+                                   class="glass-input pl-10" 
+                                   placeholder="john@example.com"
+                                   required>
+                        </div>
+                        {% if form.email.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                            Phone Number <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-white/40"></i>
+                            </div>
+                            <input type="tel" name="{{ form.phone_number.name }}" id="{{ form.phone_number.id_for_label }}" 
+                                   value="{{ form.phone_number.value|default:'' }}" 
+                                   class="glass-input pl-10" 
+                                   placeholder="0712345678"
+                                   required>
+                        </div>
+                        {% if form.phone_number.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.phone_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Password Section -->
+                <div class="space-y-4">
+                    <h3 class="text-md font-medium text-white/80 border-b border-white/10 pb-2">Security</h3>
+                    
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">
+                            Password <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-white/40"></i>
+                            </div>
+                            <input type="password" name="{{ form.password1.name }}" id="{{ form.password1.id_for_label }}" 
+                                   class="glass-input pl-10" 
+                                   placeholder="••••••••"
+                                   required>
+                            <button type="button" onclick="togglePassword('{{ form.password1.id_for_label }}')" 
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fas fa-eye text-white/40 hover:text-white/60"></i>
+                            </button>
+                        </div>
+                        {% if form.password1.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.password1.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">
+                            Confirm Password <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-white/40"></i>
+                            </div>
+                            <input type="password" name="{{ form.password2.name }}" id="{{ form.password2.id_for_label }}" 
+                                   class="glass-input pl-10" 
+                                   placeholder="••••••••"
+                                   required>
+                            <button type="button" onclick="togglePassword('{{ form.password2.id_for_label }}')" 
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fas fa-eye text-white/40 hover:text-white/60"></i>
+                            </button>
+                        </div>
+                        {% if form.password2.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.password2.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password Strength Meter -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs text-white/60">
+                            <span>Password Strength</span>
+                            <span id="password-strength-text">Enter password</span>
+                        </div>
+                        <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div id="password-strength-bar" class="h-full w-0 bg-red-500 transition-all duration-300"></div>
+                        </div>
+                        <ul class="text-xs text-white/40 space-y-1 list-disc list-inside">
+                            <li id="req-length" class="text-white/40">At least 8 characters</li>
+                            <li id="req-uppercase" class="text-white/40">At least one uppercase letter</li>
+                            <li id="req-lowercase" class="text-white/40">At least one lowercase letter</li>
+                            <li id="req-number" class="text-white/40">At least one number</li>
+                            <li id="req-special" class="text-white/40">At least one special character (@$!%*#?&)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Profile Picture (Optional) -->
+                <div>
+                    <label for="{{ form.profile_picture.id_for_label }}" class="form-label">
+                        Profile Picture (Optional)
+                    </label>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                                <i class="fas fa-user text-2xl text-white/40"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <input type="file" name="{{ form.profile_picture.name }}" id="{{ form.profile_picture.id_for_label }}" 
+                                   class="glass-input" accept="image/*">
+                            <p class="text-xs text-white/40 mt-1">Optional: Upload a profile picture (JPG, PNG, GIF)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="flex items-center">
+                    <input type="checkbox" name="terms" id="terms" class="form-checkbox h-4 w-4 text-blue-600" required>
+                    <label for="terms" class="ml-2 block text-sm text-white/80">
+                        I agree to the 
+                        <a href="#" class="text-blue-400 hover:text-blue-300">Terms of Service</a> and 
+                        <a href="#" class="text-blue-400 hover:text-blue-300">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" class="glass-button w-full py-3 text-base font-medium" id="submit-btn" disabled>
+                        <i class="fas fa-user-plus mr-2"></i>
+                        Create Account
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Additional Links -->
+        <div class="text-center">
+            <p class="text-sm text-white/40">
+                Already have an account? 
+                <a href="{% url 'accounts:login' %}" class="font-medium text-blue-400 hover:text-blue-300">
+                    Sign in
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle password visibility
+    function togglePassword(fieldId) {
+        const field = document.getElementById(fieldId);
+        const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
+        field.setAttribute('type', type);
+        
+        // Toggle eye icon
+        const button = field.nextElementSibling;
+        const icon = button.querySelector('i');
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    }
+
+    // Password strength checker
+    const passwordInput = document.getElementById('{{ form.password1.id_for_label }}');
+    const strengthBar = document.getElementById('password-strength-bar');
+    const strengthText = document.getElementById('password-strength-text');
+    const submitBtn = document.getElementById('submit-btn');
+    const termsCheckbox = document.getElementById('terms');
+
+    // Requirement elements
+    const reqLength = document.getElementById('req-length');
+    const reqUppercase = document.getElementById('req-uppercase');
+    const reqLowercase = document.getElementById('req-lowercase');
+    const reqNumber = document.getElementById('req-number');
+    const reqSpecial = document.getElementById('req-special');
+
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        let requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[@$!%*#?&]/.test(password)
+        };
+
+        // Update requirement colors
+        reqLength.className = requirements.length ? 'text-green-400' : 'text-white/40';
+        reqUppercase.className = requirements.uppercase ? 'text-green-400' : 'text-white/40';
+        reqLowercase.className = requirements.lowercase ? 'text-green-400' : 'text-white/40';
+        reqNumber.className = requirements.number ? 'text-green-400' : 'text-white/40';
+        reqSpecial.className = requirements.special ? 'text-green-400' : 'text-white/40';
+
+        // Calculate strength
+        if (requirements.length) strength += 25;
+        if (requirements.uppercase) strength += 20;
+        if (requirements.lowercase) strength += 20;
+        if (requirements.number) strength += 20;
+        if (requirements.special) strength += 15;
+
+        return { strength, requirements };
+    }
+
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        const { strength, requirements } = checkPasswordStrength(password);
+        
+        strengthBar.style.width = strength + '%';
+        
+        // Update strength text and color
+        if (strength < 30) {
+            strengthBar.className = 'h-full bg-red-500 transition-all duration-300';
+            strengthText.textContent = 'Weak';
+            strengthText.className = 'text-red-400';
+        } else if (strength < 60) {
+            strengthBar.className = 'h-full bg-yellow-500 transition-all duration-300';
+            strengthText.textContent = 'Medium';
+            strengthText.className = 'text-yellow-400';
+        } else if (strength < 80) {
+            strengthBar.className = 'h-full bg-blue-500 transition-all duration-300';
+            strengthText.textContent = 'Strong';
+            strengthText.className = 'text-blue-400';
+        } else {
+            strengthBar.className = 'h-full bg-green-500 transition-all duration-300';
+            strengthText.textContent = 'Very Strong';
+            strengthText.className = 'text-green-400';
+        }
+
+        // Enable submit button only if all requirements met and terms checked
+        const allRequirementsMet = Object.values(requirements).every(Boolean);
+        submitBtn.disabled = !(allRequirementsMet && termsCheckbox.checked);
+    });
+
+    // Terms checkbox listener
+    termsCheckbox.addEventListener('change', function() {
+        const password = passwordInput.value;
+        if (password) {
+            const { requirements } = checkPasswordStrength(password);
+            const allRequirementsMet = Object.values(requirements).every(Boolean);
+            submitBtn.disabled = !(allRequirementsMet && this.checked);
+        } else {
+            submitBtn.disabled = true;
+        }
+    });
+
+    // Password match validation
+    const confirmInput = document.getElementById('{{ form.password2.id_for_label }}');
+    
+    function checkPasswordsMatch() {
+        if (passwordInput.value && confirmInput.value) {
+            if (passwordInput.value !== confirmInput.value) {
+                confirmInput.setCustomValidity('Passwords do not match');
+                confirmInput.classList.add('border-red-500');
+            } else {
+                confirmInput.setCustomValidity('');
+                confirmInput.classList.remove('border-red-500');
+            }
+        }
+    }
+    
+    passwordInput.addEventListener('change', checkPasswordsMatch);
+    confirmInput.addEventListener('keyup', checkPasswordsMatch);
+</script>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        min-height: 100vh;
+    }
+
+    /* Radio card styles */
+    .peer:checked + div {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.2);
+    }
+
+    .peer:checked + div i,
+    .peer:checked + div p {
+        color: #3b82f6;
+    }
+
+    /* Form checkbox styling */
+    .form-checkbox {
+        border-radius: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.2s;
+    }
+
+    .form-checkbox:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    /* Password requirement list */
+    #req-length, #req-uppercase, #req-lowercase, #req-number, #req-special {
+        transition: color 0.3s ease;
+    }
+</style>
+{% endblock %}

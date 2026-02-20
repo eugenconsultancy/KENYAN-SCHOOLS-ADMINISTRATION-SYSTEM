@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Class Attendance - Form {{ class_level }} {{ stream }}{% endblock %}
+
+{% block page_title %}Class Attendance: Form {{ class_level }} {{ stream }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header with Date Navigation -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Form {{ class_level }} {{ stream }}</h2>
+                <p class="text-white/60">Attendance for {{ date|date:"l, d M Y" }}</p>
+            </div>
+            
+            <div class="flex space-x-2">
+                <a href="?date={{ prev_date|date:'Y-m-d' }}" class="glass-button">
+                    <i class="fas fa-chevron-left mr-2"></i>Previous Day
+                </a>
+                <a href="?date={{ next_date|date:'Y-m-d' }}" class="glass-button">
+                    Next Day<i class="fas fa-chevron-right ml-2"></i>
+                </a>
+                <a href="{% url 'attendance:mark_attendance' %}?class_level={{ class_level }}&stream={{ stream }}&date={{ date|date:'Y-m-d' }}" class="glass-button bg-green-600/50">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </a>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-white">{{ summary.total }}</div>
+                <div class="text-sm text-white/60">Total Students</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-400">{{ summary.present }}</div>
+                <div class="text-sm text-white/60">Present</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-400">{{ summary.absent }}</div>
+                <div class="text-sm text-white/60">Absent</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-yellow-400">{{ summary.late }}</div>
+                <div class="text-sm text-white/60">Late</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance List -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Student Attendance</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">#</th>
+                            <th class="px-4 py-2 text-left">Admission No.</th>
+                            <th class="px-4 py-2 text-left">Student Name</th>
+                            <th class="px-4 py-2 text-center">Status</th>
+                            <th class="px-4 py-2 text-center">Check In</th>
+                            <th class="px-4 py-2 text-left">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ forloop.counter }}</td>
+                            <td class="px-4 py-3 text-white">{{ student.admission_number }}</td>
+                            <td class="px-4 py-3 text-white">{{ student.get_full_name }}</td>
+                            <td class="px-4 py-3 text-center">
+                                {% with record=attendance_records|get_item:student.id %}
+                                    {% if record %}
+                                        <span class="badge 
+                                            {% if record.status == 'present' %}badge-success
+                                            {% elif record.status == 'absent' %}badge-error
+                                            {% elif record.status == 'late' %}badge-warning
+                                            {% else %}badge-info{% endif %}">
+                                            {{ record.get_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-error">Not Marked</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="px-4 py-3 text-center text-white">
+                                {% with record=attendance_records|get_item:student.id %}
+                                    {% if record and record.check_in_time %}
+                                        {{ record.check_in_time|time:"H:i" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="px-4 py-3 text-white">
+                                {% with record=attendance_records|get_item:student.id %}
+                                    {{ record.reason|default:"-" }}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="mt-6 flex justify-end space-x-3">
+        <a href="{% url 'attendance:export_attendance_csv' %}?class_level={{ class_level }}&stream={{ stream }}&date={{ date|date:'Y-m-d' }}" class="glass-button">
+            <i class="fas fa-file-csv mr-2"></i>Export CSV
+        </a>
+        <a href="{% url 'reports:attendance_report' %}?class_level={{ class_level }}&stream={{ stream }}&date={{ date|date:'Y-m-d' }}" class="glass-button">
+            <i class="fas fa-file-pdf mr-2"></i>Export PDF
+        </a>
+    </div>
+</div>
+{% endblock %}

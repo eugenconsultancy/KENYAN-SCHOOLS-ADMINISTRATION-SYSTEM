@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ exam.name }} - Exam Details{% endblock %}
+
+{% block page_title %}Exam Details: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Exam Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div>
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="badge 
+                        {% if exam.exam_type == 'endterm' %}badge-error
+                        {% elif exam.exam_type == 'midterm' %}badge-warning
+                        {% elif exam.exam_type == 'cat' %}badge-info
+                        {% else %}badge-success{% endif %}">
+                        {{ exam.get_exam_type_display }}
+                    </span>
+                    {% if exam.is_published %}
+                    <span class="badge badge-success">Published</span>
+                    {% else %}
+                    <span class="badge badge-warning">Draft</span>
+                    {% endif %}
+                </div>
+                
+                <h2 class="text-2xl font-bold text-white">{{ exam.name }}</h2>
+                <p class="text-white/60">{{ exam.term }}</p>
+            </div>
+            
+            <div class="flex space-x-2 mt-4 sm:mt-0">
+                {% if not exam.is_published %}
+                <a href="{% url 'academics:exam_edit' exam.id %}" class="glass-button">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </a>
+                <a href="{% url 'academics:exam_schedule_create' exam.id %}" class="glass-button">
+                    <i class="fas fa-clock mr-2"></i>Add Schedule
+                </a>
+                <a href="{% url 'academics:result_entry' exam.id %}" class="glass-button bg-green-600/50">
+                    <i class="fas fa-pen mr-2"></i>Enter Results
+                </a>
+                <form method="post" action="{% url 'academics:exam_publish' exam.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="glass-button bg-blue-600/50" onclick="return confirm('Publish this exam? Results will be visible to students.')">
+                        <i class="fas fa-check-circle mr-2"></i>Publish
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Exam Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="bg-white/5 rounded-lg p-4">
+                <div class="text-sm text-white/60">Start Date</div>
+                <div class="text-lg font-semibold text-white">{{ exam.start_date|date:"l, d M Y" }}</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4">
+                <div class="text-sm text-white/60">End Date</div>
+                <div class="text-lg font-semibold text-white">{{ exam.end_date|date:"l, d M Y" }}</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4">
+                <div class="text-sm text-white/60">Results Entered</div>
+                <div class="text-lg font-semibold text-white">{{ results_count }} records</div>
+            </div>
+        </div>
+        
+        {% if exam.description %}
+        <div class="mt-4 p-4 bg-white/5 rounded-lg">
+            <p class="text-white/80">{{ exam.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Exam Schedule -->
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Exam Schedule</h3>
+        </div>
+        <div class="p-6">
+            {% if schedules %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-left">Subject</th>
+                            <th class="px-4 py-2 text-left">Class</th>
+                            <th class="px-4 py-2 text-center">Time</th>
+                            <th class="px-4 py-2 text-left">Venue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ schedule.date|date:"l, d M Y" }}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-medium text-white">{{ schedule.subject.name }}</span>
+                                <span class="text-xs text-white/60 ml-2">{{ schedule.subject.code }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-white">Form {{ schedule.class_assigned.class_level }} {{ schedule.class_assigned.stream }}</td>
+                            <td class="px-4 py-3 text-center text-white">{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
+                            <td class="px-4 py-3 text-white">{{ schedule.venue|default:"TBA" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-white/60">No schedule added yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <a href="{% url 'academics:result_entry' exam.id %}" class="glass-button text-center py-4">
+            <i class="fas fa-pen-alt block text-2xl mb-2"></i>
+            <span>Enter Results</span>
+        </a>
+        <a href="{% url 'academics:result_bulk_upload' exam.id %}" class="glass-button text-center py-4">
+            <i class="fas fa-upload block text-2xl mb-2"></i>
+            <span>Bulk Upload</span>
+        </a>
+        <a href="{% url 'reports:exam_performance_report' exam.id %}" class="glass-button text-center py-4">
+            <i class="fas fa-chart-bar block text-2xl mb-2"></i>
+            <span>Performance Report</span>
+        </a>
+        <a href="{% url 'academics:result_list' %}?exam={{ exam.id }}" class="glass-button text-center py-4">
+            <i class="fas fa-list block text-2xl mb-2"></i>
+            <span>View Results</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

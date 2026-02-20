@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.subject.id_for_label }}" class="form-label">
+                        Subject <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.subject.name }}" id="{{ form.subject.id_for_label }}" 
+                            class="glass-input" required>
+                        <option value="">Select Subject</option>
+                        {% for subject in form.subject.field.queryset %}
+                        <option value="{{ subject.id }}" {% if form.subject.value == subject.id %}selected{% endif %}>
+                            {{ subject.name }} ({{ subject.code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.subject.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.subject.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.class_assigned.id_for_label }}" class="form-label">
+                        Class <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.class_assigned.name }}" id="{{ form.class_assigned.id_for_label }}" 
+                            class="glass-input" required>
+                        <option value="">Select Class</option>
+                        {% for class in form.class_assigned.field.queryset %}
+                        <option value="{{ class.id }}" {% if form.class_assigned.value == class.id %}selected{% endif %}>
+                            Form {{ class.class_level }} {{ class.stream }} ({{ class.academic_year }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.class_assigned.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.class_assigned.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="form-label">
+                    Homework Title <span class="text-red-400">*</span>
+                </label>
+                <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" 
+                       value="{{ form.title.value|default:'' }}" class="glass-input" 
+                       placeholder="e.g., Chapter 5 Algebra Problems" required>
+                {% if form.title.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.title.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    Description <span class="text-red-400">*</span>
+                </label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" 
+                          rows="6" class="glass-input" placeholder="Provide detailed instructions for the homework..." required>{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                        Due Date <span class="text-red-400">*</span>
+                    </label>
+                    <input type="date" name="{{ form.due_date.name }}" id="{{ form.due_date.id_for_label }}" 
+                           value="{{ form.due_date.value|default:'' }}" class="glass-input" 
+                           min="{{ today|date:'Y-m-d' }}" required>
+                    {% if form.due_date.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.due_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.attachments.id_for_label }}" class="form-label">
+                        Attachments (Optional)
+                    </label>
+                    <input type="file" name="{{ form.attachments.name }}" id="{{ form.attachments.id_for_label }}" 
+                           class="glass-input" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                    {% if form.attachments.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.attachments.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-white/60 mt-1">Upload worksheets, reference materials, or additional resources</p>
+                </div>
+            </div>
+            
+            <!-- Preview of current attachment -->
+            {% if homework and homework.attachments %}
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-2">Current Attachment</h4>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-paperclip text-blue-400 mr-2"></i>
+                        <span class="text-white/80">{{ homework.attachments.name|slice:"14:" }}</span>
+                    </div>
+                    <a href="{{ homework.attachments.url }}" target="_blank" class="text-blue-400 hover:text-blue-300">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Quick Tips -->
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                    Homework Tips
+                </h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>Be clear about what you expect students to submit</li>
+                    <li>Include page numbers, question numbers, or specific exercises</li>
+                    <li>Set reasonable deadlines considering students' workload</li>
+                    <li>Upload materials in PDF format for best compatibility</li>
+                </ul>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% if homework %}{% url 'academics:homework_detail' homework.id %}{% else %}{% url 'academics:homework_list' %}{% endif %}" 
+                   class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if homework %}Update{% else %}Assign{% endif %} Homework
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('{{ form.due_date.id_for_label }}').setAttribute('min', today);
+    
+    // Auto-calculate reasonable due date (default to 7 days from now)
+    if (!document.getElementById('{{ form.due_date.id_for_label }}').value) {
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        document.getElementById('{{ form.due_date.id_for_label }}').value = nextWeek.toISOString().split('T')[0];
+    }
+</script>
+{% endblock %}

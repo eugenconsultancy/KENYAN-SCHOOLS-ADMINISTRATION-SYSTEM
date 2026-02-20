@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ teacher.get_full_name }} - Trainings{% endblock %}
+
+{% block page_title %}Professional Development: {{ teacher.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="{{ teacher.user.get_profile_picture }}" alt="{{ teacher.get_full_name }}" 
+                     class="h-16 w-16 rounded-full object-cover border-2 border-white mr-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ teacher.get_full_name }}</h2>
+                    <p class="text-white/60">{{ teacher.employee_number }} | {{ teacher.tsc_number }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Trainings List -->
+        <div class="lg:col-span-2">
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Training History</h3>
+                </div>
+                <div class="p-6">
+                    {% if trainings %}
+                    <div class="space-y-4">
+                        {% for training in trainings %}
+                        <div class="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h4 class="text-lg font-medium text-white">{{ training.title }}</h4>
+                                    <p class="text-sm text-white/60">{{ training.provider }}</p>
+                                    
+                                    <div class="grid grid-cols-2 gap-4 mt-3">
+                                        <div>
+                                            <span class="text-xs text-white/40">Duration</span>
+                                            <p class="text-sm text-white">{{ training.start_date|date:"d M Y" }} - {{ training.end_date|date:"d M Y" }}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-white/40">Duration</span>
+                                            <p class="text-sm text-white">{{ training.duration_days }} days</p>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if training.description %}
+                                    <p class="text-sm text-white/80 mt-2">{{ training.description }}</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="flex space-x-2 ml-4">
+                                    {% if training.certificate %}
+                                    <a href="{{ training.certificate.url }}" target="_blank" class="text-white/60 hover:text-white" title="View Certificate">
+                                        <i class="fas fa-certificate"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No training records found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Training Form -->
+        <div>
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Add Training</h3>
+                </div>
+                <div class="p-6">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="form-label">Training Title</label>
+                                <input type="text" name="title" class="glass-input" required placeholder="e.g., CBC Training Workshop">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Provider</label>
+                                <input type="text" name="provider" class="glass-input" required placeholder="e.g., KICD">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" name="start_date" class="glass-input" required>
+                                </div>
+                                <div>
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" name="end_date" class="glass-input" required>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Duration (days)</label>
+                                <input type="number" name="duration_days" class="glass-input" required min="1">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Certificate (PDF)</label>
+                                <input type="file" name="certificate" class="glass-input" accept=".pdf">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Description</label>
+                                <textarea name="description" rows="3" class="glass-input" placeholder="Brief description of the training"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="glass-button w-full">
+                                <i class="fas fa-plus mr-2"></i>Add Training
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- CPD Hours Summary -->
+            <div class="glass-card mt-6">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">CPD Summary</h3>
+                </div>
+                <div class="p-6">
+                    {% with total_days=0 %}
+                    {% for training in trainings %}
+                        {% with total_days=total_days|add:training.duration_days %}
+                        {% endwith %}
+                    {% endfor %}
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-400">{{ total_days }}</div>
+                        <div class="text-sm text-white/60">Total Training Days</div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <div class="text-3xl font-bold text-green-400">{{ trainings|length }}</div>
+                        <div class="text-sm text-white/60">Number of Trainings</div>
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-calculate duration
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+    const durationField = document.querySelector('input[name="duration_days"]');
+    
+    function calculateDuration() {
+        if (startDate.value && endDate.value) {
+            const start = new Date(startDate.value);
+            const end = new Date(endDate.value);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            durationField.value = diffDays;
+        }
+    }
+    
+    startDate.addEventListener('change', calculateDuration);
+    endDate.addEventListener('change', calculateDuration);
+</script>
+{% endblock %}

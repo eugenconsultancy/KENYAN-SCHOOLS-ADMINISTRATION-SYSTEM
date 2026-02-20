@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Custom Report - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Create Custom Report{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Report Type -->
+            <div class="mb-6">
+                <label class="form-label">Report Title</label>
+                <input type="text" name="title" class="glass-input" required placeholder="e.g., End of Term Summary Report">
+            </div>
+            
+            <!-- Date Range -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="glass-input" required>
+                </div>
+                <div>
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="glass-input" required>
+                </div>
+            </div>
+            
+            <!-- Sections to Include -->
+            <div class="mb-6">
+                <label class="form-label">Include Sections</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="section_students" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Student Statistics</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="section_teachers" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Teacher Statistics</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="section_academics" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Academic Performance</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="section_finance" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Financial Summary</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="section_attendance" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Attendance Summary</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Chart Options -->
+            <div class="mb-6">
+                <label class="form-label">Include Visualizations</label>
+                <div class="space-y-2">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="include_charts" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Include charts and graphs</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="include_tables" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="text-white/80">Include data tables</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Format Options -->
+            <div class="mb-6">
+                <label class="form-label">Report Format</label>
+                <select name="format" class="glass-input">
+                    <option value="pdf">PDF Document</option>
+                    <option value="excel">Excel Spreadsheet</option>
+                    <option value="csv">CSV File</option>
+                </select>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'reports:index' %}" class="glass-button">Cancel</a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-file-export mr-2"></i>Generate Report
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Help Section -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Report Generation Tips</h3>
+        <div class="space-y-3 text-sm text-white/80">
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Select a date range to focus the report on specific period</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Choose sections to include only the data you need</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Charts provide visual representation of trends</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>PDF reports are formatted for printing and sharing</p>
+            <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>Excel/CSV exports are suitable for further analysis</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Attendance Dashboard - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Attendance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ today_total }}</div>
+            <div class="stat-label">Total Students Today</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle text-2xl text-green-400"></i>
+            </div>
+            <div class="stat-value">{{ today_present }}</div>
+            <div class="stat-label">Present Today</div>
+            <div class="stat-change positive">{{ today_attendance_rate|floatformat:1 }}%</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock text-2xl text-yellow-400"></i>
+            </div>
+            <div class="stat-value">{{ today_late }}</div>
+            <div class="stat-label">Late Today</div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-times-circle text-2xl text-red-400"></i>
+            </div>
+            <div class="stat-value">{{ today_absent }}</div>
+            <div class="stat-label">Absent Today</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <a href="{% url 'attendance:mark_attendance' %}" class="glass-button text-center py-4">
+            <i class="fas fa-pen-alt block text-2xl mb-2"></i>
+            <span>Mark Attendance</span>
+        </a>
+        <a href="{% url 'attendance:attendance_reports' %}" class="glass-button text-center py-4">
+            <i class="fas fa-chart-bar block text-2xl mb-2"></i>
+            <span>View Reports</span>
+        </a>
+        <a href="{% url 'attendance:send_notifications' %}" class="glass-button text-center py-4">
+            <i class="fas fa-bell block text-2xl mb-2"></i>
+            <span>Send Notifications</span>
+        </a>
+    </div>
+
+    <!-- Class-wise Attendance -->
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Class-wise Attendance Today</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Class</th>
+                            <th class="px-4 py-2 text-center">Total</th>
+                            <th class="px-4 py-2 text-center">Present</th>
+                            <th class="px-4 py-2 text-center">Percentage</th>
+                            <th class="px-4 py-2 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for class in class_attendance %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ class.class }}</td>
+                            <td class="px-4 py-3 text-center text-white">{{ class.total }}</td>
+                            <td class="px-4 py-3 text-center text-white">{{ class.present }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center">
+                                    <div class="w-16 bg-white/20 rounded-full h-2 mr-2">
+                                        <div class="bg-green-400 h-2 rounded-full" style="width: {{ class.percentage }}%"></div>
+                                    </div>
+                                    <span class="text-white text-sm">{{ class.percentage }}%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <a href="{% url 'attendance:class_attendance' class_level=class.class_level stream=class.stream %}" class="text-white/60 hover:text-white">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Attendance Records -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recent Attendance Records</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-left">Student</th>
+                            <th class="px-4 py-2 text-left">Class</th>
+                            <th class="px-4 py-2 text-center">Status</th>
+                            <th class="px-4 py-2 text-center">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in recent %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ record.date|date:"d M Y" }}</td>
+                            <td class="px-4 py-3 text-white">{{ record.student.get_full_name }}</td>
+                            <td class="px-4 py-3 text-white">Form {{ record.class_level }} {{ record.stream }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="badge 
+                                    {% if record.status == 'present' %}badge-success
+                                    {% elif record.status == 'absent' %}badge-error
+                                    {% elif record.status == 'late' %}badge-warning
+                                    {% else %}badge-info{% endif %}">
+                                    {{ record.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-white">
+                                {% if record.check_in_time %}{{ record.check_in_time|time:"H:i" }}{% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

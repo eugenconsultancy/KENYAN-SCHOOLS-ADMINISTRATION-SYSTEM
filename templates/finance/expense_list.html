@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Expenses - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Expense Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Actions Bar -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex space-x-2">
+                {% if user.is_admin or user.is_accountant %}
+                <a href="{% url 'finance:expense_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Record Expense
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="flex space-x-2">
+                <select onchange="window.location.href='?category='+this.value" class="glass-input w-auto">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"i" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                <input type="date" name="start_date" class="glass-input" value="{{ request.GET.start_date }}" onchange="this.form.submit()">
+                <input type="date" name="end_date" class="glass-input" value="{{ request.GET.end_date }}" onchange="this.form.submit()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-white/60">Total Expenses (Filtered)</p>
+                <p class="text-3xl font-bold text-white">KSh {{ total_expenses|floatformat:2 }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-white/60">Number of Transactions</p>
+                <p class="text-2xl font-bold text-white">{{ page_obj.paginator.count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses Table -->
+    <div class="glass-table overflow-hidden">
+        <table class="min-w-full">
+            <thead>
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Expense #</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Vendor</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-white/80 uppercase">Amount</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-white/80 uppercase">Status</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-white/80 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+                {% for expense in page_obj %}
+                <tr class="hover:bg-white/10">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-white">{{ expense.expense_number }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ expense.expense_date|date:"d M Y" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="badge badge-info">{{ expense.category.name }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ expense.description|truncatechars:30 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ expense.vendor_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-white font-bold">KSh {{ expense.amount|floatformat:2 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <span class="badge 
+                            {% if expense.payment_status == 'paid' %}badge-success
+                            {% elif expense.payment_status == 'approved' %}badge-info
+                            {% elif expense.payment_status == 'pending' %}badge-warning
+                            {% else %}badge-error{% endif %}">
+                            {{ expense.get_payment_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <a href="{% url 'finance:expense_detail' expense.id %}" class="text-white/60 hover:text-white">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-white/60">
+                        <i class="fas fa-receipt text-4xl mb-4"></i>
+                        <p>No expense records found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&category={{ request.GET.category }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" class="glass-button">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="glass-button bg-white/20">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&category={{ request.GET.category }}&start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}" class="glass-button">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Report Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Student Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-blue-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-user-graduate mr-2"></i>Student Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'reports:student_list_report' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Student List Report</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Generate list of all students with filters</p>
+                </a>
+                <a href="{% url 'students:list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Individual Student Report</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">View and generate report for specific student</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Academic Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-green-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-book-open mr-2"></i>Academic Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'academics:exam_list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Exam Performance Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Generate performance reports for exams</p>
+                </a>
+                <a href="{% url 'academics:term_list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Term Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Comprehensive term performance reports</p>
+                </a>
+                <a href="{% url 'academics:ranking_dashboard' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Ranking Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Student rankings by class and overall</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Attendance Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-yellow-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-calendar-check mr-2"></i>Attendance Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'attendance:attendance_reports' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Attendance Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Daily, weekly, and monthly attendance</p>
+                </a>
+                <a href="{% url 'attendance:student_attendance' 0 %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Student Attendance</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Individual student attendance history</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Finance Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-purple-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-money-bill-wave mr-2"></i>Finance Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'finance:collection_report' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Collection Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Fee collection summary by period</p>
+                </a>
+                <a href="{% url 'finance:outstanding_report' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Outstanding Fees</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Students with outstanding balances</p>
+                </a>
+                <a href="{% url 'finance:budget_list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Budget Reports</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Budget vs actual expenditure</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Teacher Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-pink-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-chalkboard-teacher mr-2"></i>Teacher Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'teachers:list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Teacher List Report</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">List of all teachers</p>
+                </a>
+                <a href="{% url 'teachers:attendance_list' %}" class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Teacher Attendance</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                    <p class="text-xs text-white/40 mt-1">Teacher attendance records</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Custom Reports -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4 bg-indigo-600/20">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-cog mr-2"></i>Custom Reports
+                </h3>
+            </div>
+            <div class="p-6">
+                <a href="{% url 'reports:custom_report' %}" class="glass-button w-full text-center py-3">
+                    <i class="fas fa-plus-circle mr-2"></i>Create Custom Report
+                </a>
+                <p class="text-xs text-white/40 text-center mt-3">
+                    Build custom reports with selected metrics and date ranges
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Reports -->
+    {% if recent_reports %}
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recently Generated Reports</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for report in recent_reports %}
+                <a href="{{ report.file.url }}" target="_blank" class="block p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center">
+                        <i class="fas fa-file-pdf text-red-400 text-2xl mr-3"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white font-medium truncate">{{ report.title }}</p>
+                            <p class="text-xs text-white/40">{{ report.generated_at|date:"d M Y H:i" }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

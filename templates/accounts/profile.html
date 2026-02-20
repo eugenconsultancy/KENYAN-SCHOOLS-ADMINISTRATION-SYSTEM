@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - Kenyan Schools System{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Profile Header -->
+    <div class="glass-card mb-6 overflow-hidden">
+        <div class="h-32 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+        <div class="px-6 py-4 relative">
+            <div class="flex flex-col sm:flex-row items-center sm:items-end -mt-16">
+                <div class="relative">
+                    <img src="{{ user.get_profile_picture }}" alt="{{ user.get_full_name }}" 
+                         class="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg">
+                    <a href="{% url 'accounts:profile_edit' %}" 
+                       class="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-camera text-gray-600"></i>
+                    </a>
+                </div>
+                <div class="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left flex-1">
+                    <h2 class="text-2xl font-bold text-white">{{ user.get_full_name|default:user.username }}</h2>
+                    <p class="text-white/80">{{ user.get_role_display }}</p>
+                    <p class="text-white/60 text-sm">Member since {{ user.date_joined|date:"F j, Y" }}</p>
+                </div>
+                <div class="mt-4 sm:mt-0">
+                    <a href="{% url 'accounts:profile_edit' %}" class="glass-button">
+                        <i class="fas fa-edit mr-2"></i>Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Information -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Personal Information -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Personal Information</h3>
+            </div>
+            <div class="p-6">
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-white/60">Full Name</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.get_full_name|default:"Not provided" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Username</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.username }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Email Address</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.email }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Phone Number</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.phone_number|default:"Not provided" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">ID Number</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.id_number|default:"Not provided" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- Account Information -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Account Information</h3>
+            </div>
+            <div class="p-6">
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-white/60">Role</dt>
+                        <dd class="mt-1">
+                            <span class="badge badge-info">{{ user.get_role_display }}</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Last Login</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.last_login|date:"F j, Y, g:i a"|default:"Never" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Last Activity</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.last_activity|date:"F j, Y, g:i a"|default:"Never" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Last Login IP</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.last_login_ip|default:"Not available" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-white/60">Account Status</dt>
+                        <dd class="mt-1">
+                            <span class="badge {% if user.is_active %}badge-success{% else %}badge-error{% endif %}">
+                                {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- Address Information -->
+        <div class="glass-card md:col-span-2">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Address Information</h3>
+            </div>
+            <div class="p-6">
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-white/60">Address</dt>
+                        <dd class="mt-1 text-sm text-white">{{ user.address|linebreaks|default:"Not provided" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="mt-6 flex flex-wrap gap-4 justify-center">
+        <a href="{% url 'accounts:change_password' %}" class="glass-button">
+            <i class="fas fa-key mr-2"></i>Change Password
+        </a>
+        <a href="{% url 'accounts:activity_log' %}" class="glass-button">
+            <i class="fas fa-history mr-2"></i>Activity Log
+        </a>
+        <a href="{% url 'accounts:notifications' %}" class="glass-button">
+            <i class="fas fa-bell mr-2"></i>Notifications
+        </a>
+    </div>
+</div>
+{% endblock %}

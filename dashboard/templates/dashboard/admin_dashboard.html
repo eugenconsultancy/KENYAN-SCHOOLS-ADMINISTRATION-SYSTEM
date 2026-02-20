@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Welcome Section -->
+    <div class="glass-card p-6 mb-8">
+        <h2 class="text-2xl font-bold text-white mb-2">Welcome back, {{ user.get_full_name }}!</h2>
+        <p class="text-white/80">Here's what's happening at your school today.</p>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up mr-1"></i> {{ active_students }} Active
+            </div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-chalkboard-teacher text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ total_teachers }}</div>
+            <div class="stat-label">Total Teachers</div>
+            <div class="stat-change positive">
+                <i class="fas fa-check-circle mr-1"></i> {{ active_teachers }} Active
+            </div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">KSh {{ total_collected|floatformat:0 }}</div>
+            <div class="stat-label">Fees Collected</div>
+            <div class="stat-change {% if outstanding > 0 %}negative{% else %}positive{% endif %}">
+                <i class="fas {% if outstanding > 0 %}fa-arrow-down{% else %}fa-arrow-up{% endif %} mr-1"></i>
+                KSh {{ outstanding|floatformat:0 }} Outstanding
+            </div>
+        </div>
+        
+        <div class="glass-card stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-check text-2xl text-white"></i>
+            </div>
+            <div class="stat-value">{{ today_attendance.present }}/{{ today_attendance.total }}</div>
+            <div class="stat-label">Today's Attendance</div>
+            <div class="stat-change">
+                <i class="fas fa-clock mr-1"></i> {{ today_attendance.late }} Late
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Monthly Collections Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Monthly Collections</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="collectionsChart" height="200"></canvas>
+            </div>
+        </div>
+        
+        <!-- Class Distribution Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Student Distribution by Class</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="classDistributionChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Class Performance -->
+        <div class="glass-card lg:col-span-2">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Class Performance - {{ current_term }}</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {% for class, avg in performance_summary.items %}
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white">{{ avg|default:"0.0" }}</div>
+                        <div class="text-sm text-white/60">{{ class }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Today's Attendance Summary -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Today's Attendance</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm text-white/60 mb-1">
+                            <span>Present</span>
+                            <span>{{ today_attendance.present }} students</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {% widthratio today_attendance.present today_attendance.total 100 %}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm text-white/60 mb-1">
+                            <span>Absent</span>
+                            <span>{{ today_attendance.absent }} students</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-red-500" style="width: {% widthratio today_attendance.absent today_attendance.total 100 %}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm text-white/60 mb-1">
+                            <span>Late</span>
+                            <span>{{ today_attendance.late }} students</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-yellow-500" style="width: {% widthratio today_attendance.late today_attendance.total 100 %}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity & Upcoming Exams -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Notifications -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Recent Activity</h3>
+            </div>
+            <div class="p-6">
+                {% if recent_notifications %}
+                <div class="space-y-4">
+                    {% for notification in recent_notifications %}
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                                <i class="fas fa-{% if notification.notification_type == 'payment' %}money-bill{% elif notification.notification_type == 'attendance' %}calendar-check{% else %}bell{% endif %} text-white/60"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-white">{{ notification.message }}</p>
+                            <p class="text-xs text-white/40">{{ notification.created_at|timesince }} ago</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center text-white/60">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Upcoming Exams -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Upcoming Exams</h3>
+            </div>
+            <div class="p-6">
+                {% if upcoming_exams %}
+                <div class="space-y-4">
+                    {% for exam in upcoming_exams %}
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-white">{{ exam.name }}</p>
+                            <p class="text-sm text-white/60">{{ exam.get_exam_type_display }} - {{ exam.term }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-white">{{ exam.start_date|date:"d M Y" }}</p>
+                            <p class="text-xs text-white/40">{{ exam.start_date|timeuntil }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center text-white/60">No upcoming exams</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Monthly Collections Chart
+    const collectionsCtx = document.getElementById('collectionsChart').getContext('2d');
+    new Chart(collectionsCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Collections (KSh)',
+                data: {{ monthly_collections|safe }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Class Distribution Chart
+    const classCtx = document.getElementById('classDistributionChart').getContext('2d');
+    new Chart(classCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for item in class_distribution %}'{{ item.class }}',{% endfor %}],
+            datasets: [{
+                data: [{% for item in class_distribution %}{{ item.count }},{% endfor %}],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

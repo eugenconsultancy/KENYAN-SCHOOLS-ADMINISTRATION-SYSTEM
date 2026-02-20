@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Attendance Reports - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Attendance Reports{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Report Generation Form -->
+    <div class="glass-card p-6 mb-8">
+        <h3 class="text-lg font-semibold text-white mb-4">Generate Attendance Report</h3>
+        
+        <form method="get" action="{% url 'attendance:generate_report' %}" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="form-label">Report Type</label>
+                    <select name="report_type" id="reportType" class="glass-input" required>
+                        <option value="">Select Report Type</option>
+                        <option value="daily">Daily Report</option>
+                        <option value="weekly">Weekly Report</option>
+                        <option value="monthly">Monthly Report</option>
+                        <option value="term">Term Report</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <div id="dateRangeStart" class="hidden">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="glass-input" value="{{ today|date:'Y-m-d' }}">
+                </div>
+                
+                <div id="dateRangeEnd" class="hidden">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="glass-input" value="{{ today|date:'Y-m-d' }}">
+                </div>
+                
+                <div id="singleDate" class="hidden">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="glass-input" value="{{ today|date:'Y-m-d' }}">
+                </div>
+                
+                <div id="monthSelector" class="hidden">
+                    <label class="form-label">Month</label>
+                    <select name="month" class="glass-input">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                
+                <div id="yearSelector" class="hidden">
+                    <label class="form-label">Year</label>
+                    <select name="year" class="glass-input">
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if year == today.year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div id="termSelector" class="hidden">
+                    <label class="form-label">Term</label>
+                    <select name="term" class="glass-input">
+                        {% for term in terms %}
+                        <option value="{{ term.id }}">{{ term }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label">Class Level (Optional)</label>
+                    <select name="class_level" class="glass-input">
+                        <option value="">All Classes</option>
+                        <option value="1">Form 1</option>
+                        <option value="2">Form 2</option>
+                        <option value="3">Form 3</option>
+                        <option value="4">Form 4</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="form-label">Stream (Optional)</label>
+                    <select name="stream" class="glass-input">
+                        <option value="">All Streams</option>
+                        <option value="East">East</option>
+                        <option value="West">West</option>
+                        <option value="North">North</option>
+                        <option value="South">South</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="form-label">Format</label>
+                    <select name="format" class="glass-input">
+                        <option value="pdf">PDF Document</option>
+                        <option value="excel">Excel Spreadsheet</option>
+                        <option value="csv">CSV File</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="reset" class="glass-button" onclick="resetForm()">
+                    <i class="fas fa-undo mr-2"></i>Reset
+                </button>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-file-export mr-2"></i>Generate Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Reports -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <a href="?report_type=daily&date={{ today|date:'Y-m-d' }}" class="glass-card p-6 hover:bg-white/5 transition-colors">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-calendar-day text-blue-400 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Daily Report</h4>
+                    <p class="text-sm text-white/60">{{ today|date:"d M Y" }}</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="?report_type=weekly&start_date={{ week_start|date:'Y-m-d' }}&end_date={{ today|date:'Y-m-d' }}" class="glass-card p-6 hover:bg-white/5 transition-colors">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-calendar-week text-green-400 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Weekly Report</h4>
+                    <p class="text-sm text-white/60">{{ week_start|date:"d M" }} - {{ today|date:"d M Y" }}</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="?report_type=monthly&month={{ today.month }}&year={{ today.year }}" class="glass-card p-6 hover:bg-white/5 transition-colors">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-calendar-alt text-purple-400 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Monthly Report</h4>
+                    <p class="text-sm text-white/60">{{ today|date:"F Y" }}</p>
+                </div>
+            </div>
+        </a>
+        
+        <a href="?report_type=term&term={{ current_term.id }}" class="glass-card p-6 hover:bg-white/5 transition-colors">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-layer-group text-yellow-400 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Term Report</h4>
+                    <p class="text-sm text-white/60">{{ current_term|default:"Current Term" }}</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent Reports -->
+    {% if recent_reports %}
+    <div class="glass-card mb-8">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recently Generated Reports</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for report in recent_reports %}
+                <div class="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start flex-1">
+                            <i class="fas fa-file-pdf text-red-400 text-2xl mr-3"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-white font-medium truncate">{{ report.title }}</p>
+                                <p class="text-xs text-white/60">{{ report.generated_at|date:"d M Y H:i" }}</p>
+                                <p class="text-xs text-white/40 mt-1">Type: {{ report.get_report_type_display }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2 ml-2">
+                            <a href="{{ report.report_file.url }}" target="_blank" class="text-white/60 hover:text-white" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ report.report_file.url }}" download class="text-white/60 hover:text-white" title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Attendance Statistics Dashboard -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Overall Statistics -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Overall Attendance Statistics</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-400">{{ total_students }}</div>
+                        <div class="text-sm text-white/60">Total Students</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-400">{{ avg_daily_attendance|default:"0" }}</div>
+                        <div class="text-sm text-white/60">Avg Daily Attendance</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-yellow-400">{{ total_days|default:"0" }}</div>
+                        <div class="text-sm text-white/60">School Days</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-purple-400">{{ attendance_rate|default:"0" }}%</div>
+                        <div class="text-sm text-white/60">Overall Rate</div>
+                    </div>
+                </div>
+                
+                <canvas id="attendanceTrends" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Class-wise Performance -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Class-wise Attendance</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for class in class_attendance %}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-white">{{ class.class }}</span>
+                            <span class="text-white">{{ class.rate|floatformat:1 }}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: {{ class.rate }}%"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-center text-white/60">No class attendance data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Quick Export Options</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{% url 'attendance:export_attendance_csv' %}?period=today" class="glass-button text-center py-3">
+                <i class="fas fa-file-csv mr-2"></i>Export Today's Data
+            </a>
+            
+            <a href="{% url 'attendance:export_attendance_csv' %}?period=week" class="glass-button text-center py-3">
+                <i class="fas fa-file-csv mr-2"></i>Export Weekly Data
+            </a>
+            
+            <a href="{% url 'attendance:export_attendance_csv' %}?period=month" class="glass-button text-center py-3">
+                <i class="fas fa-file-csv mr-2"></i>Export Monthly Data
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Dynamic form fields based on report type
+    const reportType = document.getElementById('reportType');
+    const dateRangeStart = document.getElementById('dateRangeStart');
+    const dateRangeEnd = document.getElementById('dateRangeEnd');
+    const singleDate = document.getElementById('singleDate');
+    const monthSelector = document.getElementById('monthSelector');
+    const yearSelector = document.getElementById('yearSelector');
+    const termSelector = document.getElementById('termSelector');
+    
+    function updateFormFields() {
+        // Hide all first
+        dateRangeStart.classList.add('hidden');
+        dateRangeEnd.classList.add('hidden');
+        singleDate.classList.add('hidden');
+        monthSelector.classList.add('hidden');
+        yearSelector.classList.add('hidden');
+        termSelector.classList.add('hidden');
+        
+        const type = reportType.value;
+        
+        switch(type) {
+            case 'daily':
+                singleDate.classList.remove('hidden');
+                break;
+            case 'weekly':
+                dateRangeStart.classList.remove('hidden');
+                dateRangeEnd.classList.remove('hidden');
+                break;
+            case 'monthly':
+                monthSelector.classList.remove('hidden');
+                yearSelector.classList.remove('hidden');
+                break;
+            case 'term':
+                termSelector.classList.remove('hidden');
+                break;
+            case 'custom':
+                dateRangeStart.classList.remove('hidden');
+                dateRangeEnd.classList.remove('hidden');
+                break;
+        }
+    }
+    
+    reportType.addEventListener('change', updateFormFields);
+    
+    // Initial call to set correct fields
+    updateFormFields();
+    
+    // Reset form function
+    function resetForm() {
+        document.querySelector('form').reset();
+        updateFormFields();
+    }
+    
+    // Attendance Trends Chart
+    const ctx = document.getElementById('attendanceTrends').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ trend_labels|safe }},
+            datasets: [{
+                label: 'Attendance Rate',
+                data: {{ trend_data|safe }},
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<style>
+    .hidden {
+        display: none;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Allocate Subject - {{ class_obj }}{% endblock %}
+
+{% block page_title %}Allocate Subject to {{ class_obj }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="allocationForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="form-label">Subject <span class="text-red-400">*</span></label>
+                    <select name="subject" class="glass-input" required id="subjectSelect">
+                        <option value="">Select Subject</option>
+                        {% for subject in form.subject.field.queryset %}
+                        <option value="{{ subject.id }}" {% if form.subject.value == subject.id %}selected{% endif %}>
+                            {{ subject.name }} ({{ subject.code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.subject.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.subject.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label class="form-label">Teacher</label>
+                    <select name="teacher" class="glass-input" id="teacherSelect">
+                        <option value="">Select Teacher (Optional)</option>
+                        {% for teacher in form.teacher.field.queryset %}
+                        <option value="{{ teacher.id }}" {% if form.teacher.value == teacher.id %}selected{% endif %}>
+                            {{ teacher.get_full_name }} ({{ teacher.employee_number }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.teacher.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.teacher.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label class="form-label">Lessons per Week <span class="text-red-400">*</span></label>
+                    <input type="number" name="lessons_per_week" value="{{ form.lessons_per_week.value|default:'4' }}" 
+                           class="glass-input" min="1" max="10" required>
+                    {% if form.lessons_per_week.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.lessons_per_week.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-2">Subject Information</h4>
+                <div id="subjectInfo" class="text-sm text-white/60">
+                    <p>Select a subject to view details</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'academics:subject_allocation_list' class_obj.id %}" class="glass-button">Cancel</a>
+                <button type="submit" class="glass-button bg-green-600/50">
+                    <i class="fas fa-save mr-2"></i>Allocate Subject
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Dynamic subject info display
+    document.getElementById('subjectSelect').addEventListener('change', function() {
+        const subjectId = this.value;
+        const subjectInfo = document.getElementById('subjectInfo');
+        
+        if (subjectId) {
+            // Fetch subject details via AJAX
+            fetch(`/academics/api/subject/${subjectId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    subjectInfo.innerHTML = `
+                        <p><strong>Name:</strong> ${data.name}</p>
+                        <p><strong>Code:</strong> ${data.code}</p>
+                        <p><strong>Category:</strong> ${data.category}</p>
+                        <p><strong>Type:</strong> ${data.type}</p>
+                        <p><strong>Pass Mark:</strong> ${data.pass_mark}%</p>
+                        <p><strong>Max Mark:</strong> ${data.max_mark}</p>
+                    `;
+                })
+                .catch(() => {
+                    subjectInfo.innerHTML = '<p class="text-red-400">Error loading subject details</p>';
+                });
+        } else {
+            subjectInfo.innerHTML = '<p>Select a subject to view details</p>';
+        }
+    });
+
+    // Filter teachers based on subject
+    document.getElementById('subjectSelect').addEventListener('change', function() {
+        const subjectId = this.value;
+        const teacherSelect = document.getElementById('teacherSelect');
+        
+        if (subjectId) {
+            // Fetch teachers qualified for this subject
+            fetch(`/academics/api/teachers-for-subject/${subjectId}/`)
+                .then(response => response.json())
+                .then(teachers => {
+                    // Clear current options
+                    teacherSelect.innerHTML = '<option value="">Select Teacher (Optional)</option>';
+                    
+                    // Add filtered teachers
+                    teachers.forEach(teacher => {
+                        const option = document.createElement('option');
+                        option.value = teacher.id;
+                        option.textContent = `${teacher.name} (${teacher.employee_number})`;
+                        teacherSelect.appendChild(option);
+                    });
+                });
+        } else {
+            // Reset to all teachers
+            teacherSelect.innerHTML = '{{ form.teacher }}';
+        }
+    });
+</script>
+{% endblock %}

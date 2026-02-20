@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Upload Students - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Bulk Upload Students{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Upload Form -->
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Upload CSV File</h3>
+        
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="mb-6">
+                <label for="{{ form.csv_file.id_for_label }}" class="form-label">
+                    CSV File <span class="text-red-400">*</span>
+                </label>
+                <div class="flex items-center space-x-4">
+                    <input type="file" name="{{ form.csv_file.name }}" id="{{ form.csv_file.id_for_label }}" 
+                           accept=".csv" class="hidden" onchange="updateFileName(this)">
+                    <button type="button" onclick="document.getElementById('{{ form.csv_file.id_for_label }}').click()" 
+                            class="glass-button">
+                        <i class="fas fa-folder-open mr-2"></i>Choose File
+                    </button>
+                    <span id="file-name" class="text-white/60">No file chosen</span>
+                </div>
+                {% if form.csv_file.errors %}
+                <p class="text-sm text-red-400 mt-2">{{ form.csv_file.errors.0 }}</p>
+                {% endif %}
+                {% if form.csv_file.help_text %}
+                <p class="text-xs text-white/60 mt-2">{{ form.csv_file.help_text }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Upload Progress (hidden by default) -->
+            <div id="upload-progress" class="hidden mb-6">
+                <div class="flex justify-between text-sm text-white/80 mb-2">
+                    <span>Uploading...</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="progress h-2">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Validation Summary (shown after upload) -->
+            <div id="validation-summary" class="hidden mb-6">
+                <div class="bg-white/5 rounded-lg p-4">
+                    <h4 class="text-white font-medium mb-3">Upload Summary</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-sm text-white/60">Total Records</span>
+                            <span id="total-records" class="block text-2xl font-bold text-white">0</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-white/60">Valid Records</span>
+                            <span id="valid-records" class="block text-2xl font-bold text-green-400">0</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-white/60">Errors</span>
+                            <span id="error-count" class="block text-2xl font-bold text-red-400">0</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-white/60">Warnings</span>
+                            <span id="warning-count" class="block text-2xl font-bold text-yellow-400">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'students:list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50" id="submit-btn">
+                    <i class="fas fa-upload mr-2"></i>Upload and Validate
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">CSV Format Instructions</h3>
+        
+        <div class="space-y-4">
+            <div>
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                    Required Columns:
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-white/80">
+                    <div class="bg-white/5 rounded px-3 py-2">username</div>
+                    <div class="bg-white/5 rounded px-3 py-2">first_name</div>
+                    <div class="bg-white/5 rounded px-3 py-2">last_name</div>
+                    <div class="bg-white/5 rounded px-3 py-2">admission_number</div>
+                    <div class="bg-white/5 rounded px-3 py-2">kcpe_index</div>
+                    <div class="bg-white/5 rounded px-3 py-2">kcpe_marks</div>
+                    <div class="bg-white/5 rounded px-3 py-2">date_of_birth</div>
+                    <div class="bg-white/5 rounded px-3 py-2">gender</div>
+                    <div class="bg-white/5 rounded px-3 py-2">current_class</div>
+                    <div class="bg-white/5 rounded px-3 py-2">parent_name</div>
+                    <div class="bg-white/5 rounded px-3 py-2">parent_phone</div>
+                    <div class="bg-white/5 rounded px-3 py-2">emergency_contact_name</div>
+                    <div class="bg-white/5 rounded px-3 py-2">emergency_contact_phone</div>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    Optional Columns:
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-white/80">
+                    <div class="bg-white/5 rounded px-3 py-2">email</div>
+                    <div class="bg-white/5 rounded px-3 py-2">phone_number</div>
+                    <div class="bg-white/5 rounded px-3 py-2">alternative_phone</div>
+                    <div class="bg-white/5 rounded px-3 py-2">stream</div>
+                    <div class="bg-white/5 rounded px-3 py-2">admission_class</div>
+                    <div class="bg-white/5 rounded px-3 py-2">year_of_admission</div>
+                    <div class="bg-white/5 rounded px-3 py-2">boarding_status</div>
+                    <div class="bg-white/5 rounded px-3 py-2">parent_email</div>
+                    <div class="bg-white/5 rounded px-3 py-2">parent_occupation</div>
+                    <div class="bg-white/5 rounded px-3 py-2">emergency_contact_relationship</div>
+                    <div class="bg-white/5 rounded px-3 py-2">previous_school</div>
+                    <div class="bg-white/5 rounded px-3 py-2">medical_conditions</div>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-2">Column Format Guidelines:</h4>
+                <ul class="list-disc list-inside text-sm text-white/80 space-y-1">
+                    <li><span class="text-blue-400">date_of_birth</span> - Use YYYY-MM-DD format (e.g., 2008-05-15)</li>
+                    <li><span class="text-blue-400">gender</span> - Use 'M' for Male, 'F' for Female</li>
+                    <li><span class="text-blue-400">current_class</span> - Use 1, 2, 3, or 4 for Form 1-4</li>
+                    <li><span class="text-blue-400">stream</span> - Use East, West, North, or South (defaults to East if not specified)</li>
+                    <li><span class="text-blue-400">boarding_status</span> - Use 'boarder' or 'day_scholar'</li>
+                    <li><span class="text-blue-400">kcpe_marks</span> - Number between 0 and 500</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sample CSV -->
+    <div class="glass-card p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Sample CSV Template</h3>
+        
+        <div class="overflow-x-auto bg-slate-900 rounded-lg p-4 mb-4">
+            <pre class="text-xs text-green-400 font-mono">
+username,first_name,last_name,admission_number,kcpe_index,kcpe_marks,date_of_birth,gender,current_class,parent_name,parent_phone,emergency_contact_name,emergency_contact_phone,stream
+john.doe,John,Doe,ADM/2024/1001,2023/123/4567,385,2008-05-15,M,1,John Doe Sr.,0712345678,Jane Doe,0798765432,East
+jane.smith,Jane,Smith,ADM/2024/1002,2023/123/4568,392,2008-08-22,F,1,Jane Smith Sr.,0723456789,John Smith,0787654321,East
+bob.johnson,Bob,Johnson,ADM/2024/1003,2023/123/4569,367,2008-03-10,M,2,Bob Johnson Sr.,0734567890,Alice Johnson,0765432109,West
+            </pre>
+        </div>
+        
+        <div class="flex justify-between items-center">
+            <p class="text-sm text-white/60">
+                <i class="fas fa-download mr-1"></i>
+                Download the sample template and fill in your student data
+            </p>
+            <a href="{% static 'samples/students_sample.csv' %}" download class="glass-button">
+                <i class="fas fa-download mr-2"></i>Download Sample CSV
+            </a>
+        </div>
+    </div>
+    
+    <!-- Error Display (shown after validation) -->
+    <div id="error-display" class="hidden mt-6">
+        <div class="glass-card p-6">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                Validation Errors
+            </h3>
+            <div id="error-list" class="space-y-2 max-h-96 overflow-y-auto">
+                <!-- Errors will be inserted here via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update file name display
+    function updateFileName(input) {
+        const fileName = document.getElementById('file-name');
+        if (input.files.length > 0) {
+            fileName.textContent = input.files[0].name;
+            fileName.classList.remove('text-white/60');
+            fileName.classList.add('text-green-400');
+        } else {
+            fileName.textContent = 'No file chosen';
+            fileName.classList.remove('text-green-400');
+            fileName.classList.add('text-white/60');
+        }
+    }
+    
+    // Simulate upload progress (for demonstration)
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('{{ form.csv_file.id_for_label }}');
+        if (fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select a file to upload.');
+            return;
+        }
+        
+        // Show progress bar
+        document.getElementById('upload-progress').classList.remove('hidden');
+        document.getElementById('submit-btn').disabled = true;
+        
+        // Simulate progress (in real implementation, this would be handled by the server)
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += 10;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('progress-percent').textContent = progress + '%';
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                // In production, the form will submit normally
+                // This is just for visual feedback
+            }
+        }, 200);
+    });
+    
+    // Example function to display validation errors (would be populated by server response)
+    function displayErrors(errors) {
+        const errorDisplay = document.getElementById('error-display');
+        const errorList = document.getElementById('error-list');
+        
+        errorList.innerHTML = '';
+        errors.forEach(function(error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'bg-red-500/10 border border-red-500/30 rounded-lg p-3';
+            errorDiv.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-circle text-red-400 mt-1 mr-3"></i>
+                    <div>
+                        <p class="text-sm text-red-400">${error}</p>
+                    </div>
+                </div>
+            `;
+            errorList.appendChild(errorDiv);
+        });
+        
+        errorDisplay.classList.remove('hidden');
+    }
+    
+    // Example function to show validation summary (would be populated by server response)
+    function showSummary(data) {
+        document.getElementById('validation-summary').classList.remove('hidden');
+        document.getElementById('total-records').textContent = data.total || 0;
+        document.getElementById('valid-records').textContent = data.valid || 0;
+        document.getElementById('error-count').textContent = data.errors || 0;
+        document.getElementById('warning-count').textContent = data.warnings || 0;
+    }
+    
+    // Check for session messages about import results
+    {% if messages %}
+        {% for message in messages %}
+            {% if 'import' in message.tags %}
+                // Show summary if there are import results
+                showSummary({
+                    total: {{ request.session.import_stats.total|default:0 }},
+                    valid: {{ request.session.import_stats.valid|default:0 }},
+                    errors: {{ request.session.import_stats.errors|default:0 }},
+                    warnings: {{ request.session.import_stats.warnings|default:0 }}
+                });
+                
+                {% if request.session.import_errors %}
+                displayErrors({{ request.session.import_errors|safe }});
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</script>
+
+<style>
+    /* Custom scrollbar for error list */
+    #error-list::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    #error-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+    
+    #error-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+    }
+    
+    #error-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+</style>
+{% endblock %}

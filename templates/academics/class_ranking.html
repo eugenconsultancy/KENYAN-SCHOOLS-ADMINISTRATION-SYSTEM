@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Form {{ class_level }} Rankings - {{ term }}{% endblock %}
+
+{% block page_title %}Form {{ class_level }} Rankings: {{ term }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header with Term Selection -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Form {{ class_level }} - Stream Rankings</h2>
+                <p class="text-white/60">{{ term }}</p>
+            </div>
+            
+            <div class="flex space-x-2">
+                <select onchange="window.location.href=this.value" class="glass-input w-auto">
+                    {% for t in terms %}
+                    <option value="{% url 'academics:class_ranking_term' class_level t.id %}" 
+                            {% if t.id == term.id %}selected{% endif %}>
+                        {{ t }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                <a href="{% url 'reports:ranking_report' term.id %}?class_level={{ class_level }}" class="glass-button">
+                    <i class="fas fa-file-pdf mr-2"></i>Download Report
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stream-wise Rankings -->
+    <div class="space-y-6">
+        {% for stream, summaries in stream_data.items %}
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600/30 to-purple-600/30 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">Form {{ class_level }} {{ stream }}</h3>
+                    <div class="flex space-x-4">
+                        <div class="text-center">
+                            <span class="text-sm text-white/60">Students</span>
+                            <span class="ml-2 text-lg font-bold text-white">{{ summaries|length }}</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm text-white/60">Stream Average</span>
+                            <span class="ml-2 text-lg font-bold text-white">
+                                {% with total=0 %}
+                                {% for summary in summaries %}
+                                    {% with total=total|add:summary.average %}
+                                    {% endwith %}
+                                {% endfor %}
+                                {{ summaries|length > 0 ? (summaries|sum:'average') / summaries|length : 0|floatformat:1 }}
+                                </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="text-white/60 text-sm">
+                                <th class="px-4 py-2 text-left">Rank</th>
+                                <th class="px-4 py-2 text-left">Admission No.</th>
+                                <th class="px-4 py-2 text-left">Student Name</th>
+                                <th class="px-4 py-2 text-center">Average</th>
+                                <th class="px-4 py-2 text-center">Grade</th>
+                                <th class="px-4 py-2 text-center">Points</th>
+                                <th class="px-4 py-2 text-center">Class Position</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for summary in summaries %}
+                            <tr class="border-t border-white/10 {% if forloop.counter <= 3 %}bg-yellow-500/5{% endif %}">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center">
+                                        {% if forloop.counter == 1 %}
+                                        <span class="flex items-center justify-center w-6 h-6 bg-yellow-500 rounded-full text-white text-sm font-bold">1</span>
+                                        {% elif forloop.counter == 2 %}
+                                        <span class="flex items-center justify-center w-6 h-6 bg-gray-400 rounded-full text-white text-sm font-bold">2</span>
+                                        {% elif forloop.counter == 3 %}
+                                        <span class="flex items-center justify-center w-6 h-6 bg-orange-600 rounded-full text-white text-sm font-bold">3</span>
+                                        {% else %}
+                                        <span class="text-white/60">{{ forloop.counter }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-white">{{ summary.student.admission_number }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center">
+                                        <img src="{{ summary.student.user.get_profile_picture }}" alt="{{ summary.student.get_full_name }}" 
+                                             class="h-8 w-8 rounded-full object-cover mr-2">
+                                        <span class="text-white">{{ summary.student.get_full_name }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-center text-white font-bold">{{ summary.average|floatformat:1 }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge 
+                                        {% if summary.mean_grade == 'A' or summary.mean_grade == 'A-' %}badge-success
+                                        {% elif summary.mean_grade == 'B+' or summary.mean_grade == 'B' or summary.mean_grade == 'B-' %}badge-info
+                                        {% elif summary.mean_grade == 'C+' or summary.mean_grade == 'C' or summary.mean_grade == 'C-' %}badge-warning
+                                        {% else %}badge-error{% endif %}">
+                                        {{ summary.mean_grade }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center text-white">{{ summary.total_points }}</td>
+                                <td class="px-4 py-3 text-center text-white">{{ summary.position_in_class|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-white/60">
+                                    <i class="fas fa-chart-line text-4xl mb-3"></i>
+                                    <p>No ranking data available for this stream.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Performance Distribution Chart -->
+    <div class="glass-card mt-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Grade Distribution - Form {{ class_level }}</h3>
+        </div>
+        <div class="p-6">
+            <canvas id="gradeDistributionChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Collect grade distribution data
+    const gradeCounts = {
+        'A': 0, 'A-': 0, 'B+': 0, 'B': 0, 'B-': 0,
+        'C+': 0, 'C': 0, 'C-': 0, 'D+': 0, 'D': 0, 'D-': 0, 'E': 0
+    };
+    
+    {% for stream, summaries in stream_data.items %}
+        {% for summary in summaries %}
+            gradeCounts['{{ summary.mean_grade }}'] = (gradeCounts['{{ summary.mean_grade }}'] || 0) + 1;
+        {% endfor %}
+    {% endfor %}
+    
+    const ctx = document.getElementById('gradeDistributionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(gradeCounts),
+            datasets: [{
+                label: 'Number of Students',
+                data: Object.values(gradeCounts),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

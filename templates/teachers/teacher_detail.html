@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ teacher.get_full_name }} - Teacher Profile{% endblock %}
+
+{% block page_title %}Teacher Profile{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Profile Header -->
+    <div class="glass-card overflow-hidden mb-6">
+        <div class="h-32 bg-gradient-to-r from-green-500 to-teal-600"></div>
+        <div class="px-6 py-4 relative">
+            <div class="flex flex-col sm:flex-row items-center sm:items-end -mt-16">
+                <div class="relative">
+                    <img src="{{ teacher.user.get_profile_picture }}" alt="{{ teacher.get_full_name }}" 
+                         class="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg">
+                </div>
+                <div class="mt-4 sm:mt-0 sm:ml-6 text-center sm:text-left flex-1">
+                    <h2 class="text-2xl font-bold text-white">{{ teacher.get_full_name }}</h2>
+                    <p class="text-white/80">{{ teacher.employee_number }} | TSC: {{ teacher.tsc_number }}</p>
+                    <p class="text-white/60 text-sm">{{ teacher.qualification_level }} | {{ teacher.specialization|default:"General" }}</p>
+                </div>
+                <div class="mt-4 sm:mt-0 flex space-x-2">
+                    <a href="{% url 'teachers:edit' teacher.id %}" class="glass-button">
+                        <i class="fas fa-edit mr-2"></i>Edit Profile
+                    </a>
+                    <a href="{% url 'reports:teacher_report' teacher.id %}" class="glass-button">
+                        <i class="fas fa-file-pdf mr-2"></i>Download Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ subjects.count }}</div>
+            <div class="text-sm text-white/60">Subjects Taught</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ form_classes.count }}</div>
+            <div class="text-sm text-white/60">Form Classes</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">{{ teacher.years_of_experience }}</div>
+            <div class="text-sm text-white/60">Years Experience</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+            <div class="text-2xl font-bold text-white">
+                <span class="badge {% if teacher.is_active %}badge-success{% else %}badge-error{% endif %}">
+                    {% if teacher.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="text-sm text-white/60">Status</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column - Personal Info -->
+        <div class="space-y-6">
+            <!-- Personal Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Personal Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Full Name</dt>
+                            <dd class="text-sm text-white">{{ teacher.get_full_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Date of Birth</dt>
+                            <dd class="text-sm text-white">{{ teacher.date_of_birth|date:"d M Y" }} ({{ teacher.get_age }} years)</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Gender</dt>
+                            <dd class="text-sm text-white">{{ teacher.get_gender_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Marital Status</dt>
+                            <dd class="text-sm text-white">{{ teacher.get_marital_status_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">ID Number</dt>
+                            <dd class="text-sm text-white">{{ teacher.id_number }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Contact Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Phone</dt>
+                            <dd class="text-sm text-white">{{ teacher.phone_number }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Alternative</dt>
+                            <dd class="text-sm text-white">{{ teacher.alternative_phone|default:"Not provided" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Email</dt>
+                            <dd class="text-sm text-white">{{ teacher.email }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Address</dt>
+                            <dd class="text-sm text-white">{{ teacher.physical_address|default:"Not provided" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Emergency Contact</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Name</dt>
+                            <dd class="text-sm text-white">{{ teacher.emergency_contact_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Phone</dt>
+                            <dd class="text-sm text-white">{{ teacher.emergency_contact_phone }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Relationship</dt>
+                            <dd class="text-sm text-white">{{ teacher.emergency_contact_relationship }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Column - Professional Info -->
+        <div class="space-y-6">
+            <!-- Professional Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Professional Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Employee Number</dt>
+                            <dd class="text-sm text-white">{{ teacher.employee_number }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">TSC Number</dt>
+                            <dd class="text-sm text-white">{{ teacher.tsc_number }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Qualification</dt>
+                            <dd class="text-sm text-white">{{ teacher.get_qualification_level_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Specialization</dt>
+                            <dd class="text-sm text-white">{{ teacher.specialization|default:"General" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Date Employed</dt>
+                            <dd class="text-sm text-white">{{ teacher.date_employed|date:"d M Y" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Employment Type</dt>
+                            <dd class="text-sm text-white">{{ teacher.get_employment_type_display }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Qualifications -->
+            {% if qualifications %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Qualifications</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for qual in qualifications %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-white">{{ qual.qualification }}</p>
+                                <p class="text-xs text-white/60">{{ qual.institution }} ({{ qual.year_obtained }})</p>
+                            </div>
+                            {% if qual.certificate %}
+                            <a href="{{ qual.certificate.url }}" target="_blank" class="text-white/60 hover:text-white">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Subjects Taught -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Subjects Taught</h3>
+                    <a href="{% url 'teachers:subjects' teacher.id %}" class="text-white/60 hover:text-white">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if subjects %}
+                    <div class="space-y-2">
+                        {% for subject in subjects %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-white">{{ subject.subject.name }}</span>
+                            <span class="badge {% if subject.is_main %}badge-success{% else %}badge-info{% endif %}">
+                                {% if subject.is_main %}Main{% else %}Additional{% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No subjects assigned</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Performance & Activities -->
+        <div class="space-y-6">
+            <!-- Performance Evaluations -->
+            {% if performances %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Recent Evaluations</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        {% for perf in performances %}
+                        <div class="border-l-4 {% if perf.get_average_rating >= 4 %}border-green-500{% elif perf.get_average_rating >= 3 %}border-blue-500{% else %}border-yellow-500{% endif %} pl-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium text-white">{{ perf.term }}</p>
+                                    <p class="text-xs text-white/60">Evaluated: {{ perf.evaluation_date|date:"d M Y" }}</p>
+                                </div>
+                                <span class="badge badge-info">{{ perf.get_average_rating|floatformat:1 }}/5</span>
+                            </div>
+                            {% if perf.comments %}
+                            <p class="text-sm text-white/80 mt-2">{{ perf.comments|truncatechars:100 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Trainings -->
+            {% if trainings %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Recent Trainings</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for training in trainings %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-white">{{ training.title }}</p>
+                                <p class="text-xs text-white/60">{{ training.provider }} ({{ training.end_date|date:"Y" }})</p>
+                            </div>
+                            {% if training.certificate %}
+                            <a href="{{ training.certificate.url }}" target="_blank" class="text-white/60 hover:text-white">
+                                <i class="fas fa-certificate"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Awards -->
+            {% if awards %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Awards & Recognition</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for award in awards %}
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-trophy text-yellow-400"></i>
+                            <div>
+                                <p class="font-medium text-white">{{ award.award_name }}</p>
+                                <p class="text-xs text-white/60">{{ award.awarding_body }} ({{ award.date_received|date:"Y" }})</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if notes %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Recent Notes</h3>
+                    <button onclick="openNoteModal()" class="text-white/60 hover:text-white">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for note in notes %}
+                        <div class="border-l-4 
+                            {% if note.note_type == 'disciplinary' %}border-red-500
+                            {% elif note.note_type == 'achievement' %}border-green-500
+                            {% else %}border-blue-500{% endif %} pl-3">
+                            <p class="font-medium text-white">{{ note.title }}</p>
+                            <p class="text-xs text-white/60">{{ note.created_at|date:"d M Y" }} by {{ note.created_by.get_full_name }}</p>
+                            <p class="text-sm text-white/80 mt-1">{{ note.content|truncatechars:100 }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Documents Section -->
+    {% if documents %}
+    <div class="glass-card mt-6">
+        <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-white">Documents</h3>
+            <a href="{% url 'teachers:document_upload' teacher.id %}" class="text-white/60 hover:text-white">
+                <i class="fas fa-upload mr-2"></i>Upload
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for doc in documents %}
+                <div class="bg-white/5 rounded-lg p-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-file-{% if doc.document_type == 'cv' %}alt{% elif doc.document_type == 'contract' %}signature{% else %}pdf{% endif %} text-2xl text-blue-400 mr-3"></i>
+                            <div>
+                                <p class="font-medium text-white">{{ doc.title }}</p>
+                                <p class="text-xs text-white/60">{{ doc.get_document_type_display }}</p>
+                                <p class="text-xs text-white/40 mt-1">Uploaded: {{ doc.uploaded_at|date:"d M Y" }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="{{ doc.file.url }}" target="_blank" class="text-white/60 hover:text-white">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'teachers:document_delete' doc.id %}" class="text-white/60 hover:text-red-400">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% if doc.expiry_date %}
+                    <div class="mt-2 text-xs {% if doc.expiry_date < today %}text-red-400{% else %}text-yellow-400{% endif %}">
+                        <i class="fas fa-clock mr-1"></i>
+                        Expires: {{ doc.expiry_date|date:"d M Y" }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Note Modal -->
+<div id="noteModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Add Note</h3>
+        <form method="post" action="{% url 'teachers:add_note' teacher.id %}">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="form-label">Note Type</label>
+                    <select name="note_type" class="glass-input" required>
+                        <option value="general">General</option>
+                        <option value="performance">Performance</option>
+                        <option value="disciplinary">Disciplinary</option>
+                        <option value="achievement">Achievement</option>
+                        <option value="training">Training Need</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="glass-input" required>
+                </div>
+                <div>
+                    <label class="form-label">Content</label>
+                    <textarea name="content" rows="4" class="glass-input" required></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="closeNoteModal()" class="glass-button">Cancel</button>
+                <button type="submit" class="glass-button bg-blue-600/50">Save Note</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openNoteModal() {
+        document.getElementById('noteModal').classList.remove('hidden');
+        document.getElementById('noteModal').classList.add('flex');
+    }
+    
+    function closeNoteModal() {
+        document.getElementById('noteModal').classList.add('hidden');
+        document.getElementById('noteModal').classList.remove('flex');
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('noteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeNoteModal();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Audit Logs - Kenyan Schools System{% endblock %}
+
+{% block page_title %}System Audit Logs{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Filter Form -->
+    <div class="glass-card p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="form-label">User</label>
+                <select name="user" class="glass-input">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if user_filter == user.id|stringformat:"i" %}selected{% endif %}>
+                        {{ user.get_full_name|default:user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="form-label">Action</label>
+                <select name="action" class="glass-input">
+                    <option value="">All Actions</option>
+                    {% for value, label in actions %}
+                    <option value="{{ value }}" {% if action_filter == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="glass-button">
+                    <i class="fas fa-filter mr-2"></i>Filter
+                </button>
+                <a href="{% url 'accounts:audit_logs' %}" class="glass-button">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Audit Logs Table -->
+    <div class="glass-table overflow-hidden">
+        <table class="min-w-full">
+            <thead>
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Timestamp</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Model</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Object</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">IP Address</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+                {% for log in page_obj %}
+                <tr class="hover:bg-white/10">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ log.user.get_full_name|default:log.user.username|default:"System" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="badge 
+                            {% if log.action == 'CREATE' %}badge-success
+                            {% elif log.action == 'UPDATE' %}badge-info
+                            {% elif log.action == 'DELETE' %}badge-error
+                            {% else %}badge-warning{% endif %}">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ log.model_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ log.object_repr|truncatechars:30 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ log.ip_address|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-white/60">
+                        <i class="fas fa-history text-4xl mb-4"></i>
+                        <p>No audit logs found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&user={{ user_filter }}&action={{ action_filter }}" class="glass-button">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="glass-button bg-white/20">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&user={{ user_filter }}&action={{ action_filter }}" class="glass-button">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

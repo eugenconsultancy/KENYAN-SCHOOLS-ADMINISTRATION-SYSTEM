@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Upload Teachers - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Bulk Upload Teachers{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Upload CSV File</h3>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="mb-4">
+                <label for="{{ form.csv_file.id_for_label }}" class="form-label">
+                    CSV File <span class="text-red-400">*</span>
+                </label>
+                <input type="file" name="{{ form.csv_file.name }}" id="{{ form.csv_file.id_for_label }}" 
+                       accept=".csv" class="glass-input" required>
+                {% if form.csv_file.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.csv_file.errors.0 }}</p>
+                {% endif %}
+                {% if form.csv_file.help_text %}
+                <p class="text-xs text-white/60 mt-1">{{ form.csv_file.help_text }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{% url 'teachers:list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-upload mr-2"></i>Upload
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="glass-card p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">CSV Format Instructions</h3>
+        
+        <div class="space-y-4">
+            <div>
+                <h4 class="text-white font-medium mb-2">Required Columns:</h4>
+                <ul class="list-disc list-inside text-sm text-white/80 space-y-1">
+                    <li>username</li>
+                    <li>first_name</li>
+                    <li>last_name</li>
+                    <li>email</li>
+                    <li>employee_number</li>
+                    <li>tsc_number</li>
+                    <li>id_number</li>
+                    <li>date_of_birth (YYYY-MM-DD)</li>
+                    <li>gender (M/F)</li>
+                    <li>phone_number</li>
+                    <li>emergency_contact_name</li>
+                    <li>emergency_contact_phone</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="text-white font-medium mb-2">Optional Columns:</h4>
+                <ul class="list-disc list-inside text-sm text-white/80 space-y-1">
+                    <li>marital_status (single/married/divorced/widowed)</li>
+                    <li>qualification_level</li>
+                    <li>qualifications</li>
+                    <li>specialization</li>
+                    <li>years_of_experience</li>
+                    <li>date_employed (YYYY-MM-DD)</li>
+                    <li>employment_type</li>
+                    <li>alternative_phone</li>
+                    <li>physical_address</li>
+                    <li>postal_address</li>
+                    <li>emergency_contact_relationship</li>
+                </ul>
+            </div>
+            
+            <div class="mt-4 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-2">Sample CSV Header:</h4>
+                <pre class="text-xs text-white/80 overflow-x-auto">
+username,first_name,last_name,email,employee_number,tsc_number,id_number,date_of_birth,gender,phone_number,emergency_contact_name,emergency_contact_phone
+jdoe,John,Doe,john.doe@school.com,TCH001,123456,98765432,1985-05-15,M,0712345678,Jane Doe,0798765432
+                </pre>
+            </div>
+            
+            <a href="{% static 'samples/teachers_sample.csv' %}" download class="glass-button w-full text-center mt-4">
+                <i class="fas fa-download mr-2"></i>Download Sample CSV
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

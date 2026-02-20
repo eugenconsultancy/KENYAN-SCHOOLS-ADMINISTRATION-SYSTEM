@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Kenyan Schools System{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/glass.css' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- HTMX -->
+    <script src="{% static 'js/htmx.min.js' %}" defer></script>
+    
+    <style>
+        /* Additional contrast improvements */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.85) !important; /* Darker background with more opacity */
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f8fafc;
+        }
+        
+        .glass-card p, .glass-card span:not(.badge), .glass-card div:not(.badge) {
+            color: #e2e8f0 !important;
+        }
+        
+        .glass-card .text-white\/60, .glass-card .text-white\/80 {
+            color: #cbd5e1 !important;
+        }
+        
+        .glass-input {
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f8fafc !important;
+        }
+        
+        .glass-input::placeholder {
+            color: #94a3b8 !important;
+        }
+        
+        .glass-input:focus {
+            border-color: #3b82f6;
+            background: rgba(15, 23, 42, 0.9) !important;
+        }
+        
+        .glass-button {
+            background: rgba(37, 99, 235, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff !important;
+            font-weight: 500;
+        }
+        
+        .glass-button:hover {
+            background: rgba(37, 99, 235, 0.9);
+        }
+        
+        /* Table styles */
+        .glass-table {
+            background: rgba(30, 41, 59, 0.85);
+        }
+        
+        .glass-table th {
+            background: rgba(15, 23, 42, 0.9);
+            color: #f8fafc !important;
+            font-weight: 600;
+        }
+        
+        .glass-table td {
+            color: #e2e8f0 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Badge styles */
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80 !important;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+        
+        .badge-warning {
+            background: rgba(234, 179, 8, 0.2);
+            color: #facc15 !important;
+            border: 1px solid rgba(250, 204, 21, 0.3);
+        }
+        
+        .badge-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171 !important;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        
+        .badge-info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa !important;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }
+        
+        /* Sidebar styles */
+        .glass-sidebar {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-sidebar a {
+            color: #cbd5e1 !important;
+        }
+        
+        .glass-sidebar a:hover {
+            background: rgba(51, 65, 85, 0.7);
+            color: #ffffff !important;
+        }
+        
+        .glass-sidebar a.bg-white\/20 {
+            background: rgba(37, 99, 235, 0.5) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Navbar styles */
+        .glass-navbar {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-navbar .text-white\/80 {
+            color: #cbd5e1 !important;
+        }
+        
+        .glass-navbar .text-white\/80:hover {
+            color: #ffffff !important;
+        }
+        
+        /* Alert styles */
+        .alert-success {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: #bbf7d0 !important;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #fecaca !important;
+        }
+        
+        .alert-warning {
+            background: rgba(234, 179, 8, 0.15);
+            border: 1px solid rgba(250, 204, 21, 0.3);
+            color: #fef08a !important;
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: #bfdbfe !important;
+        }
+        
+        /* Stat card styles */
+        .stat-card .stat-value {
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+        
+        .stat-card .stat-label {
+            color: #94a3b8 !important;
+        }
+        
+        /* Modal styles */
+        .glass-modal {
+            background: rgba(15, 23, 42, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Dropdown styles */
+        .glass-dropdown {
+            background: rgba(15, 23, 42, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .glass-dropdown a {
+            color: #cbd5e1 !important;
+        }
+        
+        .glass-dropdown a:hover {
+            background: rgba(51, 65, 85, 0.7);
+            color: #ffffff !important;
+        }
+        
+        /* Progress bar */
+        .progress {
+            background: rgba(51, 65, 85, 0.5);
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    
+    <!-- Sidebar -->
+    {% if user.is_authenticated %}
+        {% include 'components/sidebar.html' %}
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="{% if user.is_authenticated %}ml-64{% endif %} transition-all duration-300">
+        <!-- Navbar -->
+        {% if user.is_authenticated %}
+            {% include 'components/navbar.html' %}
+        {% endif %}
+        
+        <!-- Messages/Alerts -->
+        <div class="container mx-auto px-4 py-4">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="rounded-lg p-4 mb-4 {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">
+                        <div class="flex items-center">
+                            {% if message.tags == 'success' %}
+                                <i class="fas fa-check-circle text-green-400 mr-3 text-xl"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="fas fa-exclamation-circle text-red-400 mr-3 text-xl"></i>
+                            {% elif message.tags == 'warning' %}
+                                <i class="fas fa-exclamation-triangle text-yellow-400 mr-3 text-xl"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle text-blue-400 mr-3 text-xl"></i>
+                            {% endif %}
+                            <span class="text-white font-medium">{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <!-- Page Content -->
+        <main class="container mx-auto px-4 py-8">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer -->
+        <footer class="container mx-auto px-4 py-6 text-center border-t border-white/10 mt-8">
+            <p class="text-slate-400 text-sm">&copy; {% now "Y" %} Kenyan Schools System. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/charts.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mark Attendance - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Select Class and Date</h3>
+        <form method="post" id="attendanceForm">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="form-label">Class Level</label>
+                    <select name="class_level" id="classLevel" class="glass-input" required>
+                        <option value="">Select Class</option>
+                        <option value="1" {% if class_level == '1' %}selected{% endif %}>Form 1</option>
+                        <option value="2" {% if class_level == '2' %}selected{% endif %}>Form 2</option>
+                        <option value="3" {% if class_level == '3' %}selected{% endif %}>Form 3</option>
+                        <option value="4" {% if class_level == '4' %}selected{% endif %}>Form 4</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="form-label">Stream</label>
+                    <select name="stream" id="stream" class="glass-input" required>
+                        <option value="">Select Stream</option>
+                        <option value="East" {% if stream == 'East' %}selected{% endif %}>East</option>
+                        <option value="West" {% if stream == 'West' %}selected{% endif %}>West</option>
+                        <option value="North" {% if stream == 'North' %}selected{% endif %}>North</option>
+                        <option value="South" {% if stream == 'South' %}selected{% endif %}>South</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" id="date" class="glass-input" value="{{ date|date:'Y-m-d'|default:'' }}" required>
+                </div>
+                
+                <div>
+                    <label class="form-label">Session</label>
+                    <select name="session" class="glass-input">
+                        <option value="">Select Session (Optional)</option>
+                        {% for session in sessions %}
+                        <option value="{{ session.id }}" {% if session_id == session.id|stringformat:"i" %}selected{% endif %}>
+                            {{ session.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="submit" name="action" value="load" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-search mr-2"></i>Load Students
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if students %}
+    <div class="glass-card p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">
+            Mark Attendance for Form {{ class_level }} {{ stream }} - {{ date|date:"d M Y" }}
+        </h3>
+        
+        <form method="post" id="attendanceSaveForm">
+            {% csrf_token %}
+            <input type="hidden" name="class_level" value="{{ class_level }}">
+            <input type="hidden" name="stream" value="{{ stream }}">
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+            <input type="hidden" name="session" value="{{ session_id }}">
+            
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">#</th>
+                            <th class="px-4 py-2 text-left">Admission No.</th>
+                            <th class="px-4 py-2 text-left">Student Name</th>
+                            <th class="px-4 py-2 text-center">Status</th>
+                            <th class="px-4 py-2 text-left">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ forloop.counter }}</td>
+                            <td class="px-4 py-3 text-white">{{ student.admission_number }}</td>
+                            <td class="px-4 py-3 text-white">{{ student.get_full_name }}</td>
+                            <td class="px-4 py-3">
+                                <select name="status_{{ student.id }}" class="glass-input text-sm">
+                                    <option value="present" 
+                                        {% for key, record in attendance_records.items %}
+                                            {% if key == student.id and record.status == 'present' %}selected{% endif %}
+                                        {% endfor %}>Present</option>
+                                    <option value="absent"
+                                        {% for key, record in attendance_records.items %}
+                                            {% if key == student.id and record.status == 'absent' %}selected{% endif %}
+                                        {% endfor %}>Absent</option>
+                                    <option value="late"
+                                        {% for key, record in attendance_records.items %}
+                                            {% if key == student.id and record.status == 'late' %}selected{% endif %}
+                                        {% endfor %}>Late</option>
+                                    <option value="excused"
+                                        {% for key, record in attendance_records.items %}
+                                            {% if key == student.id and record.status == 'excused' %}selected{% endif %}
+                                        {% endfor %}>Excused</option>
+                                    <option value="sick"
+                                        {% for key, record in attendance_records.items %}
+                                            {% if key == student.id and record.status == 'sick' %}selected{% endif %}
+                                        {% endfor %}>Sick</option>
+                                </select>
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="text" name="reason_{{ student.id }}" class="glass-input text-sm" 
+                                       placeholder="Reason (if absent)" 
+                                       value="{% for key, record in attendance_records.items %}{% if key == student.id %}{{ record.reason }}{% endif %}{% endfor %}">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'attendance:attendance_dashboard' %}" class="glass-button">Cancel</a>
+                <button type="submit" name="action" value="save" class="glass-button bg-green-600/50">
+                    <i class="fas fa-save mr-2"></i>Save Attendance
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('classLevel').addEventListener('change', function() {
+        document.getElementById('attendanceForm').submit();
+    });
+    
+    document.getElementById('stream').addEventListener('change', function() {
+        document.getElementById('attendanceForm').submit();
+    });
+    
+    document.getElementById('date').addEventListener('change', function() {
+        document.getElementById('attendanceForm').submit();
+    });
+</script>
+{% endblock %}

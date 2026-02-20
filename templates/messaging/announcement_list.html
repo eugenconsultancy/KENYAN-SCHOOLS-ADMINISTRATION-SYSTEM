@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Announcements - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Actions Bar -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex space-x-2">
+                {% if user.is_admin or user.is_teacher %}
+                <a href="{% url 'messaging:announcement_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>New Announcement
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="flex space-x-2">
+                <a href="?show=active" class="glass-button {% if show == 'active' %}bg-blue-600/50{% endif %}">Active</a>
+                <a href="?show=expired" class="glass-button {% if show == 'expired' %}bg-blue-600/50{% endif %}">Expired</a>
+                <a href="?show=all" class="glass-button {% if show == 'all' %}bg-blue-600/50{% endif %}">All</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcements List -->
+    <div class="space-y-4">
+        {% for announcement in page_obj %}
+        <div class="glass-card overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="badge 
+                                {% if announcement.priority == 'urgent' %}badge-error
+                                {% elif announcement.priority == 'high' %}badge-warning
+                                {% elif announcement.priority == 'normal' %}badge-info
+                                {% else %}badge-success{% endif %}">
+                                {{ announcement.get_priority_display }}
+                            </span>
+                            <span class="badge badge-info">{{ announcement.get_audience_display }}</span>
+                            {% if not announcement.is_active %}
+                            <span class="badge badge-error">Expired</span>
+                            {% endif %}
+                        </div>
+                        
+                        <h3 class="text-xl font-semibold text-white mb-2">{{ announcement.title }}</h3>
+                        <p class="text-white/80 mb-4">{{ announcement.content|truncatechars:200 }}</p>
+                        
+                        <div class="flex items-center text-sm text-white/60 space-x-4">
+                            <span>
+                                <i class="fas fa-calendar mr-1"></i>
+                                {{ announcement.publish_date|date:"d M Y H:i" }}
+                            </span>
+                            <span>
+                                <i class="fas fa-user mr-1"></i>
+                                {{ announcement.created_by.get_full_name }}
+                            </span>
+                            <span>
+                                <i class="fas fa-eye mr-1"></i>
+                                {{ announcement.read_by.count }} views
+                            </span>
+                        </div>
+                        
+                        {% if announcement.attachment %}
+                        <div class="mt-3">
+                            <a href="{{ announcement.attachment.url }}" target="_blank" class="text-sm text-white/60 hover:text-white">
+                                <i class="fas fa-paperclip mr-1"></i>
+                                {{ announcement.attachment.name|slice:"14:" }}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="ml-4 flex space-x-2">
+                        <a href="{% url 'messaging:announcement_detail' announcement.id %}" class="text-white/60 hover:text-white">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% if user.is_admin or user == announcement.created_by %}
+                        <a href="{% url 'messaging:announcement_edit' announcement.id %}" class="text-white/60 hover:text-white">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'messaging:announcement_delete' announcement.id %}" class="text-white/60 hover:text-red-400">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="glass-card p-12 text-center">
+            <i class="fas fa-bullhorn text-5xl text-white/40 mb-4"></i>
+            <h3 class="text-xl font-semibold text-white mb-2">No Announcements</h3>
+            <p class="text-white/60">There are no announcements to display.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&show={{ show }}" class="glass-button">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="glass-button bg-white/20">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&show={{ show }}" class="glass-button">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

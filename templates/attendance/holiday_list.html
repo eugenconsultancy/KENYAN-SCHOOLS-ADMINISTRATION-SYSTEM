@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Holidays - Kenyan Schools System{% endblock %}
+
+{% block page_title %}School Holidays{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Actions Bar -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="flex space-x-2">
+                <a href="{% url 'attendance:holiday_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Add Holiday
+                </a>
+            </div>
+            
+            <div class="flex space-x-2">
+                <select onchange="window.location.href=this.value" class="glass-input w-auto">
+                    {% for y in years %}
+                    <option value="?year={{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Holidays Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for holiday in holidays %}
+        <div class="glass-card overflow-hidden">
+            <div class="p-4 {% if holiday.holiday_type == 'public' %}bg-red-500/20{% elif holiday.holiday_type == 'school' %}bg-blue-500/20{% else %}bg-green-500/20{% endif %}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-sm font-medium text-white/80">{{ holiday.date|date:"l" }}</span>
+                        <h3 class="text-xl font-bold text-white">{{ holiday.name }}</h3>
+                    </div>
+                    <span class="badge 
+                        {% if holiday.holiday_type == 'public' %}badge-error
+                        {% elif holiday.holiday_type == 'school' %}badge-info
+                        {% else %}badge-success{% endif %}">
+                        {{ holiday.get_holiday_type_display }}
+                    </span>
+                </div>
+                <div class="mt-2">
+                    <p class="text-2xl font-bold text-white">{{ holiday.date|date:"d M Y" }}</p>
+                </div>
+                {% if holiday.description %}
+                <p class="text-sm text-white/60 mt-2">{{ holiday.description }}</p>
+                {% endif %}
+                {% if holiday.is_recurring %}
+                <span class="inline-flex items-center mt-2 text-xs text-white/60">
+                    <i class="fas fa-redo-alt mr-1"></i> Recurring annually
+                </span>
+                {% endif %}
+            </div>
+            <div class="px-4 py-3 bg-white/5 flex justify-end space-x-2">
+                <a href="{% url 'attendance:holiday_edit' holiday.id %}" class="text-white/60 hover:text-white">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'attendance:holiday_delete' holiday.id %}" class="text-white/60 hover:text-red-400">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12">
+            <div class="glass-card p-8">
+                <i class="fas fa-calendar-times text-5xl text-white/40 mb-4"></i>
+                <h3 class="text-xl font-semibold text-white mb-2">No Holidays Found</h3>
+                <p class="text-white/60 mb-6">No holidays have been added for {{ year }}</p>
+                <a href="{% url 'attendance:holiday_create' %}" class="glass-button">
+                    <i class="fas fa-plus mr-2"></i>Add First Holiday
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

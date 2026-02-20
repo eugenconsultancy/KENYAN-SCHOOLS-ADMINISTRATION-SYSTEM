@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Form {{ class_obj.class_level }} {{ class_obj.stream }} - Class Details{% endblock %}
+
+{% block page_title %}Class: Form {{ class_obj.class_level }} {{ class_obj.stream }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Class Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Form {{ class_obj.class_level }} {{ class_obj.stream }}</h2>
+                <p class="text-white/60">{{ class_obj.academic_year }}</p>
+            </div>
+            
+            <div class="flex space-x-2 mt-4 sm:mt-0">
+                <a href="{% url 'academics:class_edit' class_obj.id %}" class="glass-button">
+                    <i class="fas fa-edit mr-2"></i>Edit Class
+                </a>
+                <a href="{% url 'academics:subject_allocation_list' class_obj.id %}" class="glass-button">
+                    <i class="fas fa-book mr-2"></i>Subjects
+                </a>
+            </div>
+        </div>
+        
+        <!-- Class Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-white">{{ student_count }}</div>
+                <div class="text-sm text-white/60">Total Students</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-white">{{ subjects.count }}</div>
+                <div class="text-sm text-white/60">Subjects</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-white">
+                    {% if class_obj.class_teacher %}
+                    {{ class_obj.class_teacher.get_full_name }}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </div>
+                <div class="text-sm text-white/60">Class Teacher</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-white">{{ class_obj.capacity }}</div>
+                <div class="text-sm text-white/60">Capacity</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Students List -->
+        <div class="lg:col-span-2">
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Students</h3>
+                    <a href="{% url 'students:list' %}?class_level={{ class_obj.class_level }}&stream={{ class_obj.stream }}" class="text-white/60 hover:text-white">
+                        View All <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if students %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="text-white/60 text-sm">
+                                    <th class="px-4 py-2 text-left">#</th>
+                                    <th class="px-4 py-2 text-left">Admission No.</th>
+                                    <th class="px-4 py-2 text-left">Student Name</th>
+                                    <th class="px-4 py-2 text-center">Gender</th>
+                                    <th class="px-4 py-2 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students|slice:":10" %}
+                                <tr class="border-t border-white/10">
+                                    <td class="px-4 py-3 text-white">{{ forloop.counter }}</td>
+                                    <td class="px-4 py-3 text-white">{{ student.admission_number }}</td>
+                                    <td class="px-4 py-3 text-white">{{ student.get_full_name }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="badge {% if student.gender == 'M' %}badge-info{% else %}badge-success{% endif %}">
+                                            {{ student.get_gender_display }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a href="{% url 'students:detail' student.id %}" class="text-white/60 hover:text-white">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if students.count > 10 %}
+                    <div class="mt-4 text-center">
+                        <p class="text-white/60 text-sm">Showing 10 of {{ students.count }} students</p>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-center text-white/60">No students in this class</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Subjects List -->
+        <div>
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">Subjects</h3>
+                    <a href="{% url 'academics:subject_allocation_list' class_obj.id %}" class="text-white/60 hover:text-white">
+                        Manage <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if subjects %}
+                    <div class="space-y-3">
+                        {% for subject in subjects %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-white">{{ subject.subject.name }}</span>
+                                <span class="text-xs text-white/40 ml-2">{{ subject.subject.code }}</span>
+                            </div>
+                            <span class="text-sm text-white/60">{{ subject.teacher.get_full_name|default:"Not Assigned" }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No subjects allocated</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card mt-6">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Quick Actions</h3>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'attendance:mark_attendance' %}?class_level={{ class_obj.class_level }}&stream={{ class_obj.stream }}" class="glass-button w-full text-center">
+                        <i class="fas fa-calendar-check mr-2"></i>Mark Attendance
+                    </a>
+                    <a href="{% url 'academics:class_results' class_obj.id %}?term={{ current_term.id }}" class="glass-button w-full text-center">
+                        <i class="fas fa-chart-line mr-2"></i>View Results
+                    </a>
+                    <a href="{% url 'reports:class_result_slip' class_obj.id %}" class="glass-button w-full text-center">
+                        <i class="fas fa-file-pdf mr-2"></i>Download Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

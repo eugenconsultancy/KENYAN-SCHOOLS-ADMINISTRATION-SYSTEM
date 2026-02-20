@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Conversation - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Conversation{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="glass-card p-4">
+                <a href="{% url 'messaging:inbox' %}" class="block mb-4 text-white/80 hover:text-white">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Inbox
+                </a>
+                
+                <h4 class="text-sm font-semibold text-white/60 uppercase mb-2">Participants</h4>
+                <div class="space-y-3">
+                    {% for participant in other_participants %}
+                    <div class="flex items-center">
+                        <img src="{{ participant.get_profile_picture }}" alt="{{ participant.get_full_name }}" class="h-8 w-8 rounded-full object-cover">
+                        <div class="ml-2">
+                            <p class="text-sm font-medium text-white">{{ participant.get_full_name|default:participant.username }}</p>
+                            <p class="text-xs text-white/40">{{ participant.get_role_display }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversation -->
+        <div class="lg:col-span-3">
+            <div class="glass-card flex flex-col h-[600px]">
+                <!-- Messages -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messageContainer">
+                    {% for message in messages %}
+                    <div class="flex {% if message.sender == user %}justify-end{% endif %}">
+                        <div class="flex items-start max-w-[70%] {% if message.sender == user %}flex-row-reverse{% endif %}">
+                            <div class="flex-shrink-0 {% if message.sender == user %}ml-3{% else %}mr-3{% endif %}">
+                                <img src="{{ message.sender.get_profile_picture }}" alt="{{ message.sender.get_full_name }}" class="h-8 w-8 rounded-full object-cover">
+                            </div>
+                            <div>
+                                <div class="{% if message.sender == user %}bg-blue-500/30{% else %}bg-white/10{% endif %} rounded-lg p-3">
+                                    <p class="text-sm text-white">{{ message.content }}</p>
+                                    {% if message.attachment %}
+                                    <a href="{{ message.attachment.url }}" target="_blank" class="inline-flex items-center mt-2 text-xs text-white/60 hover:text-white">
+                                        <i class="fas fa-paperclip mr-1"></i>
+                                        {{ message.attachment.name|slice:"14:" }}
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center mt-1 text-xs text-white/40">
+                                    <span>{{ message.created_at|time:"H:i" }}</span>
+                                    {% if message.sender == user %}
+                                        <span class="ml-2">
+                                            {% if message in conversation.messages.all and message.read_by.all %}
+                                                <i class="fas fa-check-double text-blue-400"></i>
+                                            {% else %}
+                                                <i class="fas fa-check"></i>
+                                            {% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Reply Form -->
+                <div class="border-t border-white/20 p-4">
+                    <form method="post" enctype="multipart/form-data" class="flex space-x-2">
+                        {% csrf_token %}
+                        <input type="text" name="content" placeholder="Type your message..." class="glass-input flex-1" required>
+                        <label class="cursor-pointer">
+                            <input type="file" name="attachment" class="hidden">
+                            <span class="glass-button inline-block">
+                                <i class="fas fa-paperclip"></i>
+                            </span>
+                        </label>
+                        <button type="submit" class="glass-button bg-blue-600/50">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Scroll to bottom on page load
+    const container = document.getElementById('messageContainer');
+    container.scrollTop = container.scrollHeight;
+    
+    // Auto-refresh every 10 seconds
+    setInterval(function() {
+        location.reload();
+    }, 10000);
+</script>
+{% endblock %}

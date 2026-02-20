@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ teacher.get_full_name }} - Awards{% endblock %}
+
+{% block page_title %}Awards & Recognition: {{ teacher.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="{{ teacher.user.get_profile_picture }}" alt="{{ teacher.get_full_name }}" 
+                     class="h-16 w-16 rounded-full object-cover border-2 border-white mr-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ teacher.get_full_name }}</h2>
+                    <p class="text-white/60">{{ teacher.employee_number }} | {{ teacher.tsc_number }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Awards List -->
+        <div class="lg:col-span-2">
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Awards & Recognition</h3>
+                </div>
+                <div class="p-6">
+                    {% if awards %}
+                    <div class="space-y-4">
+                        {% for award in awards %}
+                        <div class="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 mr-4">
+                                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-trophy text-yellow-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between">
+                                        <h4 class="text-lg font-medium text-white">{{ award.award_name }}</h4>
+                                        <span class="text-sm text-white/60">{{ award.date_received|date:"Y" }}</span>
+                                    </div>
+                                    <p class="text-sm text-white/80">{{ award.awarding_body }}</p>
+                                    {% if award.description %}
+                                    <p class="text-sm text-white/60 mt-2">{{ award.description }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    {% if award.certificate %}
+                                    <a href="{{ award.certificate.url }}" target="_blank" class="text-white/60 hover:text-white" title="View Certificate">
+                                        <i class="fas fa-certificate"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-white/60">No awards or recognition records found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Award Form -->
+        <div>
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Add Award</h3>
+                </div>
+                <div class="p-6">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="form-label">Award Name</label>
+                                <input type="text" name="award_name" class="glass-input" required 
+                                       placeholder="e.g., Teacher of the Year">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Awarding Body</label>
+                                <input type="text" name="awarding_body" class="glass-input" required 
+                                       placeholder="e.g., Ministry of Education">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Date Received</label>
+                                <input type="date" name="date_received" class="glass-input" required>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Certificate (PDF)</label>
+                                <input type="file" name="certificate" class="glass-input" accept=".pdf">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">Description</label>
+                                <textarea name="description" rows="3" class="glass-input" 
+                                          placeholder="Brief description of the award"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="glass-button w-full">
+                                <i class="fas fa-plus mr-2"></i>Add Award
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Achievement Stats -->
+            <div class="glass-card mt-6">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Achievement Stats</h3>
+                </div>
+                <div class="p-6">
+                    <div class="text-center mb-4">
+                        <div class="text-4xl font-bold text-yellow-400">{{ awards|length }}</div>
+                        <div class="text-sm text-white/60">Total Awards</div>
+                    </div>
+                    
+                    {% if awards %}
+                    <div class="space-y-2">
+                        <h4 class="text-sm font-medium text-white/80">Recent Awards</h4>
+                        {% for award in awards|slice:":3" %}
+                        <div class="text-xs text-white/60">
+                            {{ award.award_name }} ({{ award.date_received|date:"Y" }})
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
