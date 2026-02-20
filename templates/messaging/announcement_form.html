@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if announcement %}Edit{% else %}Create{% endif %} Announcement - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if announcement %}Edit Announcement{% else %}Create New Announcement{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Basic Information -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Announcement Details</h3>
+                
+                <div>
+                    <label for="{{ form.title.id_for_label }}" class="form-label">
+                        Title <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" 
+                           value="{{ form.title.value|default:'' }}" 
+                           class="glass-input" 
+                           placeholder="e.g., School Closing Early, Sports Day Announcement"
+                           required>
+                    {% if form.title.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.title.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.content.id_for_label }}" class="form-label">
+                        Content <span class="text-red-400">*</span>
+                    </label>
+                    <textarea name="{{ form.content.name }}" id="{{ form.content.id_for_label }}" 
+                              rows="8" class="glass-input" 
+                              placeholder="Write your announcement here..."
+                              required>{{ form.content.value|default:'' }}</textarea>
+                    {% if form.content.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.content.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Audience Selection -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Target Audience</h3>
+                
+                <div>
+                    <label for="{{ form.audience_type.id_for_label }}" class="form-label">
+                        Audience <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.audience_type.name }}" id="audienceType" class="glass-input" required>
+                        <option value="">Select Audience</option>
+                        {% for value, label in form.audience_type.field.choices %}
+                            {% if value %}
+                            <option value="{{ value }}" {% if form.audience_type.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% if form.audience_type.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.audience_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Class-specific options (hidden by default) -->
+                <div id="classOptions" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg">
+                    <div>
+                        <label for="{{ form.target_class_level.id_for_label }}" class="form-label">
+                            Class Level
+                        </label>
+                        <select name="{{ form.target_class_level.name }}" id="targetClass" class="glass-input">
+                            <option value="">Select Class</option>
+                            {% for value, label in form.target_class_level.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.target_class_level.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.target_stream.id_for_label }}" class="form-label">
+                            Stream (Optional)
+                        </label>
+                        <select name="{{ form.target_stream.name }}" id="targetStream" class="glass-input">
+                            <option value="">All Streams</option>
+                            {% for value, label in form.target_stream.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.target_stream.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2 bg-blue-500/10 p-3 rounded-lg">
+                        <p class="text-sm text-blue-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            This announcement will be visible to all students in the selected class and stream.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Schedule</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.publish_date.id_for_label }}" class="form-label">
+                            Publish Date & Time <span class="text-red-400">*</span>
+                        </label>
+                        <input type="datetime-local" name="{{ form.publish_date.name }}" id="publishDate" 
+                               value="{{ form.publish_date.value|date:'Y-m-d\TH:i'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.publish_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.publish_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                            Expiry Date (Optional)
+                        </label>
+                        <input type="datetime-local" name="{{ form.expiry_date.name }}" id="expiryDate" 
+                               value="{{ form.expiry_date.value|date:'Y-m-d\TH:i'|default:'' }}" 
+                               class="glass-input">
+                        {% if form.expiry_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.expiry_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="schedulePreview" class="bg-white/5 p-4 rounded-lg">
+                    <h4 class="text-white font-medium mb-2">Schedule Preview</h4>
+                    <p class="text-sm text-white/80" id="publishPreview">Not scheduled yet</p>
+                    <p class="text-sm text-white/80" id="expiryPreview"></p>
+                </div>
+            </div>
+
+            <!-- Priority & Settings -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Priority & Settings</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.priority.id_for_label }}" class="form-label">
+                            Priority
+                        </label>
+                        <select name="{{ form.priority.name }}" id="priority" class="glass-input">
+                            {% for value, label in form.priority.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.priority.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.attachment.id_for_label }}" class="form-label">
+                            Attachment (Optional)
+                        </label>
+                        <input type="file" name="{{ form.attachment.name }}" id="attachment" 
+                               class="glass-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        {% if announcement and announcement.attachment %}
+                        <div class="mt-2 text-sm text-white/60">
+                            Current: <a href="{{ announcement.attachment.url }}" target="_blank" class="text-blue-400 hover:underline">{{ announcement.attachment.name|slice:"14:" }}</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_notifications" class="form-checkbox h-4 w-4 text-blue-600" checked>
+                        <span class="ml-2 text-white/80">Send push notifications</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_email" class="form-checkbox h-4 w-4 text-blue-600">
+                        <span class="ml-2 text-white/80">Send email alerts</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="pin_to_top" class="form-checkbox h-4 w-4 text-blue-600">
+                        <span class="ml-2 text-white/80">Pin to top</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="border-t border-white/20 pt-6">
+                <button type="button" onclick="previewAnnouncement()" class="glass-button mb-4">
+                    <i class="fas fa-eye mr-2"></i>Preview Announcement
+                </button>
+                
+                <div id="previewCard" class="hidden glass-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-white" id="previewTitle"></h4>
+                        <span class="badge" id="previewPriority"></span>
+                    </div>
+                    <p class="text-white/80 mb-4" id="previewContent"></p>
+                    <div class="flex items-center text-sm text-white/40">
+                        <span id="previewDate"></span>
+                        <span class="mx-2">•</span>
+                        <span id="previewAudience"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'messaging:announcement_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if announcement %}Update{% else %}Publish{% endif %} Announcement
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Tips Card -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Announcement Tips</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-bullhorn text-blue-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Clear & Concise</h4>
+                    <p class="text-sm text-white/60">Keep announcements brief and to the point for better engagement.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-clock text-green-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Timing Matters</h4>
+                    <p class="text-sm text-white/60">Schedule announcements during active hours for maximum visibility.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-users text-purple-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Target Audience</h4>
+                    <p class="text-sm text-white/60">Select the right audience to ensure relevance.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-paperclip text-yellow-400"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium">Attachments</h4>
+                    <p class="text-sm text-white/60">Add relevant documents or images when needed.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide class options based on audience selection
+    const audienceType = document.getElementById('audienceType');
+    const classOptions = document.getElementById('classOptions');
+    
+    audienceType.addEventListener('change', function() {
+        if (this.value === 'class') {
+            classOptions.classList.remove('hidden');
+        } else {
+            classOptions.classList.add('hidden');
+        }
+        updatePreview();
+    });
+    
+    // Schedule preview
+    const publishDate = document.getElementById('publishDate');
+    const expiryDate = document.getElementById('expiryDate');
+    const publishPreview = document.getElementById('publishPreview');
+    const expiryPreview = document.getElementById('expiryPreview');
+    
+    function updateSchedulePreview() {
+        if (publishDate.value) {
+            const date = new Date(publishDate.value);
+            publishPreview.textContent = `Publishes: ${date.toLocaleString()}`;
+        } else {
+            publishPreview.textContent = 'Not scheduled yet';
+        }
+        
+        if (expiryDate.value) {
+            const date = new Date(expiryDate.value);
+            expiryPreview.textContent = `Expires: ${date.toLocaleString()}`;
+        } else {
+            expiryPreview.textContent = 'No expiry date set';
+        }
+    }
+    
+    publishDate.addEventListener('change', updateSchedulePreview);
+    expiryDate.addEventListener('change', updateSchedulePreview);
+    
+    // Preview functionality
+    function previewAnnouncement() {
+        const title = document.getElementById('{{ form.title.id_for_label }}').value;
+        const content = document.getElementById('{{ form.content.id_for_label }}').value;
+        const priority = document.getElementById('priority');
+        const audience = document.getElementById('audienceType');
+        
+        if (!title || !content) {
+            alert('Please fill in title and content first');
+            return;
+        }
+        
+        document.getElementById('previewTitle').textContent = title;
+        document.getElementById('previewContent').textContent = content;
+        
+        // Set priority badge
+        const priorityBadge = document.getElementById('previewPriority');
+        const priorityText = priority.options[priority.selectedIndex].text;
+        priorityBadge.textContent = priorityText;
+        
+        if (priority.value === 'urgent') {
+            priorityBadge.className = 'badge badge-error';
+        } else if (priority.value === 'high') {
+            priorityBadge.className = 'badge badge-warning';
+        } else if (priority.value === 'normal') {
+            priorityBadge.className = 'badge badge-info';
+        } else {
+            priorityBadge.className = 'badge badge-success';
+        }
+        
+        // Set date
+        const now = new Date();
+        document.getElementById('previewDate').textContent = now.toLocaleDateString();
+        
+        // Set audience
+        const audienceText = audience.options[audience.selectedIndex].text;
+        document.getElementById('previewAudience').textContent = `To: ${audienceText}`;
+        
+        // Show preview
+        document.getElementById('previewCard').classList.remove('hidden');
+    }
+    
+    // Character count (optional)
+    const contentField = document.getElementById('{{ form.content.id_for_label }}');
+    const charCount = document.createElement('div');
+    charCount.className = 'text-xs text-white/40 text-right mt-1';
+    contentField.parentNode.appendChild(charCount);
+    
+    contentField.addEventListener('input', function() {
+        const count = this.value.length;
+        charCount.textContent = `${count} characters`;
+    });
+    
+    // Initialize
+    updateSchedulePreview();
+    if (audienceType.value === 'class') {
+        classOptions.classList.remove('hidden');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if template %}Edit{% else %}Create{% endif %} Message Template - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if template %}Edit Message Template{% else %}Create New Message Template{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Basic Information -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Template Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            Template Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" 
+                               value="{{ form.name.value|default:'' }}" 
+                               class="glass-input" 
+                               placeholder="e.g., Fee Reminder, Exam Notification"
+                               required>
+                        {% if form.name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.template_type.id_for_label }}" class="form-label">
+                            Template Type <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.template_type.name }}" id="templateType" class="glass-input" required>
+                            <option value="">Select Type</option>
+                            {% for value, label in form.template_type.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.template_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.template_type.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.template_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Content -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-white mb-4">Template Content</h3>
+                
+                <div>
+                    <label for="{{ form.subject.id_for_label }}" class="form-label">
+                        Subject <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" name="{{ form.subject.name }}" id="subject" 
+                           value="{{ form.subject.value|default:'' }}" 
+                           class="glass-input" 
+                           placeholder="Enter message subject with optional variables like {{ student_name }}"
+                           required>
+                    {% if form.subject.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.subject.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.content.id_for_label }}" class="form-label">
+                        Message Body <span class="text-red-400">*</span>
+                    </label>
+                    <textarea name="{{ form.content.name }}" id="content" 
+                              rows="10" class="glass-input font-mono" 
+                              placeholder="Write your template here... Use {{ variable_name }} for dynamic content"
+                              required>{{ form.content.value|default:'' }}</textarea>
+                    {% if form.content.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.content.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Variables Helper -->
+            <div class="bg-blue-500/10 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-3 flex items-center">
+                    <i class="fas fa-code text-blue-400 mr-2"></i>
+                    Available Variables
+                </h4>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ student_name }}" }}</code>
+                        <span class="text-white/60 block text-xs">Student's full name</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ parent_name }}" }}</code>
+                        <span class="text-white/60 block text-xs">Parent's name</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ teacher_name }}" }}</code>
+                        <span class="text-white/60 block text-xs">Teacher's name</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ class_name }}" }}</code>
+                        <span class="text-white/60 block text-xs">Class (e.g., Form 1 East)</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ date }}" }}</code>
+                        <span class="text-white/60 block text-xs">Current date</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ time }}" }}</code>
+                        <span class="text-white/60 block text-xs">Current time</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ term }}" }}</code>
+                        <span class="text-white/60 block text-xs">Current term</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ year }}" }}</code>
+                        <span class="text-white/60 block text-xs">Academic year</span>
+                    </div>
+                    <div class="bg-white/5 rounded p-2">
+                        <code class="text-blue-400">{{ "{{ amount }}" }}</code>
+                        <span class="text-white/60 block text-xs">Fee amount</span>
+                    </div>
+                </div>
+                
+                <p class="text-xs text-white/40 mt-3">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Click on any variable to insert it at cursor position
+                </p>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="border-t border-white/20 pt-6">
+                <button type="button" onclick="previewTemplate()" class="glass-button mb-4">
+                    <i class="fas fa-eye mr-2"></i>Preview Template
+                </button>
+                
+                <div id="previewCard" class="hidden glass-card p-6">
+                    <h4 class="text-lg font-semibold text-white mb-3">Preview</h4>
+                    
+                    <div class="bg-white/5 rounded-lg p-4 mb-3">
+                        <span class="text-sm text-white/60">Subject:</span>
+                        <p class="text-white font-medium" id="previewSubject"></p>
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-lg p-4">
+                        <span class="text-sm text-white/60">Message:</span>
+                        <div class="text-white/80 mt-2 whitespace-pre-wrap" id="previewContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'messaging:template_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if template %}Update{% else %}Create{% endif %} Template
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Example Templates -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Example Templates</h3>
+        
+        <div class="space-y-4">
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-2">Fee Reminder</h4>
+                <pre class="text-sm text-white/60 whitespace-pre-wrap">Dear {{ "{{ parent_name }}" }},
+
+This is a reminder that fees for {{ "{{ student_name }}" }} ({{ "{{ class_name }}" }}) for {{ "{{ term }}" }} {{ "{{ year }}" }} are due by {{ "{{ due_date }}" }}.
+
+Amount due: KES {{ "{{ amount }}" }}
+
+Please make payments via the school portal or bank to avoid late penalties.
+
+Thank you,
+School Administration</pre>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-2">Exam Notification</h4>
+                <pre class="text-sm text-white/60 whitespace-pre-wrap">Dear {{ "{{ student_name }}" }},
+
+The {{ "{{ exam_name }}" }} for {{ "{{ subject }}" }} will be held on {{ "{{ exam_date }}" }} at {{ "{{ exam_time }}" }} in {{ "{{ venue }}" }}.
+
+Please come prepared with all necessary materials.
+
+Good luck!
+Academic Department</pre>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-2">Attendance Alert</h4>
+                <pre class="text-sm text-white/60 whitespace-pre-wrap">Dear {{ "{{ parent_name }}" }},
+
+Your child {{ "{{ student_name }}" }} was marked {{ "{{ status }}" }} on {{ "{{ date }}" }}.
+
+{% if reason %}Reason: {{ "{{ reason }}" }}{% endif %}
+
+Please ensure regular attendance. Contact the school if you have any concerns.
+
+Thank you,
+Class Teacher</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview functionality
+    function previewTemplate() {
+        const subject = document.getElementById('subject').value;
+        const content = document.getElementById('content').value;
+        
+        if (!subject || !content) {
+            alert('Please fill in both subject and content first');
+            return;
+        }
+        
+        // Sample data for preview
+        const sampleData = {
+            'student_name': 'John Odhiambo',
+            'parent_name': 'Mary Odhiambo',
+            'teacher_name': 'Mr. Omondi',
+            'class_name': 'Form 1 East',
+            'date': new Date().toLocaleDateString(),
+            'time': new Date().toLocaleTimeString(),
+            'term': 'Term 1',
+            'year': '2024',
+            'amount': '15,000',
+            'due_date': '2024-03-15',
+            'exam_name': 'End Term Examination',
+            'subject': 'Mathematics',
+            'exam_date': '2024-03-20',
+            'exam_time': '8:30 AM',
+            'venue': 'Hall A',
+            'status': 'absent',
+            'reason': 'Sick'
+        };
+        
+        // Replace variables with sample data
+        let previewSubject = subject;
+        let previewContent = content;
+        
+        for (const [key, value] of Object.entries(sampleData)) {
+            const regex = new RegExp(`{{ ${key} }}`, 'g');
+            previewSubject = previewSubject.replace(regex, value);
+            previewContent = previewContent.replace(regex, value);
+        }
+        
+        document.getElementById('previewSubject').textContent = previewSubject;
+        document.getElementById('previewContent').textContent = previewContent;
+        document.getElementById('previewCard').classList.remove('hidden');
+    }
+    
+    // Insert variable at cursor position
+    function insertVariable(variable) {
+        const contentField = document.getElementById('content');
+        const start = contentField.selectionStart;
+        const end = contentField.selectionEnd;
+        const text = contentField.value;
+        
+        contentField.value = text.substring(0, start) + `{{ ${variable} }}` + text.substring(end);
+        contentField.selectionStart = contentField.selectionEnd = start + variable.length + 6;
+        contentField.focus();
+    }
+    
+    // Add click handlers to variable items
+    document.querySelectorAll('.bg-white\\/5.rounded.p-2').forEach(item => {
+        item.addEventListener('click', function() {
+            const code = this.querySelector('code').textContent;
+            const variable = code.slice(3, -3).trim();
+            insertVariable(variable);
+        });
+    });
+    
+    // Auto-resize textarea
+    const contentArea = document.getElementById('content');
+    contentArea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+</script>
+{% endblock %}
