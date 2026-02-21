@@ -1,8 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
-from students.models import Student
-# Remove direct import of Teacher - will use string references
+# Remove direct import of Student - will query directly in methods
 from accounts.models import User
 import datetime
 
@@ -149,11 +148,22 @@ class Class(models.Model):
         return f"Form {self.class_level} {self.stream} - {self.academic_year}"
     
     def get_student_count(self):
-        return self.students.filter(is_active=True).count()
+        """
+        Get the number of active students in this class by querying the Student model directly
+        """
+        from students.models import Student
+        return Student.objects.filter(
+            current_class=self.class_level,
+            stream=self.stream,
+            is_active=True
+        ).count()
     
     def get_capacity_percentage(self):
+        """
+        Calculate the percentage of class capacity filled
+        """
         count = self.get_student_count()
-        return (count / self.capacity) * 100 if self.capacity > 0 else 0
+        return (count / self.capacity * 100) if self.capacity > 0 else 0
 
 class SubjectAllocation(models.Model):
     """Allocation of subjects to classes with teachers"""
@@ -247,7 +257,7 @@ class Result(models.Model):
         ('E', 'E'),
     ]
     
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='results')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='results')  # String reference
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     
@@ -317,7 +327,7 @@ class Result(models.Model):
 class ResultSummary(models.Model):
     """Summary of student results per term"""
     
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='result_summaries')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='result_summaries')  # String reference
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='result_summaries')
     
     total_marks = models.IntegerField(default=0)
@@ -427,7 +437,7 @@ class HomeworkSubmission(models.Model):
     """Student homework submissions"""
     
     homework = models.ForeignKey(Homework, on_delete=models.CASCADE, related_name='submissions')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='homework_submissions')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='homework_submissions')  # String reference
     
     submission_date = models.DateTimeField(auto_now_add=True)
     content = models.TextField(blank=True)

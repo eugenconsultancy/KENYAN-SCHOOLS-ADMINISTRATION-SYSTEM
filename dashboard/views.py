@@ -285,8 +285,8 @@ def student_dashboard(request):
         publish_date__lte=today
     ).order_by('-publish_date')[:5]
     
-    # Unread notifications count
-    unread_notifications = request.user.notifications.filter(is_read=False).count()
+    # Unread notifications count - FIXED: changed from 'notifications' to 'account_notifications'
+    unread_notifications = request.user.account_notifications.filter(is_read=False).count()
     
     # Clubs and sports
     clubs = student.clubs.all()

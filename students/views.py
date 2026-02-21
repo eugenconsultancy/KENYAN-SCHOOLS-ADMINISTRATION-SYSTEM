@@ -131,32 +131,86 @@ def student_detail(request, student_id):
 @admin_required
 def student_create(request):
     """Create new student"""
+    import sys
+    import traceback
+    
+    print("\n" + "="*60)
+    print("STUDENT CREATE VIEW - DEBUG")
+    print("="*60)
+    print(f"Request method: {request.method}")
+    print(f"User: {request.user.username} (Role: {request.user.role})")
+    
     if request.method == 'POST':
+        print("\n--- POST Data ---")
+        for key, value in request.POST.items():
+            if 'password' not in key.lower():
+                print(f"  {key}: {value}")
+        
+        print("\n--- FILES Data ---")
+        for key, file in request.FILES.items():
+            print(f"  {key}: {file.name}")
+        
         form = StudentForm(request.POST, request.FILES, request=request)
+        print(f"\nForm instance PK: {form.instance.pk}")
+        print(f"Form is bound: {form.is_bound}")
+        
         if form.is_valid():
-            student = form.save()
+            print("\n✓ Form is valid!")
+            try:
+                student = form.save()
+                print(f"✓ Student saved with ID: {student.id}")
+                print(f"✓ Student name: {student.get_full_name()}")
+                print(f"✓ Admission number: {student.admission_number}")
+                
+                # Create audit log
+                from accounts.models import AuditLog
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='CREATE',
+                    model_name='Student',
+                    object_id=student.id,
+                    object_repr=str(student),
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+                messages.success(request, f'Student {student.get_full_name()} created successfully.')
+                print(f"→ Redirecting to: students:detail with ID {student.id}")
+                
+                # Use HttpResponseRedirect to ensure proper redirect
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('students:detail', args=[student.id]))
+                
+            except Exception as e:
+                print(f"\n✗ Exception during save: {str(e)}")
+                traceback.print_exc(file=sys.stdout)
+                messages.error(request, f'Error creating student: {str(e)}')
+                # Stay on the form page to show errors
+                return render(request, 'students/student_form.html', {
+                    'form': form,
+                    'title': 'Add New Student'
+                })
+        else:
+            print("\n✗ Form is invalid!")
+            print("Form errors:", form.errors)
             
-            # Create audit log
-            from accounts.models import AuditLog
-            AuditLog.objects.create(
-                user=request.user,
-                action='CREATE',
-                model_name='Student',
-                object_id=student.id,
-                object_repr=str(student),
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
+            # Print field-specific errors
+            for field, errors in form.errors.items():
+                print(f"  {field}: {', '.join(errors)}")
             
-            messages.success(request, f'Student {student.get_full_name()} created successfully.')
-            return redirect('students:detail', student_id=student.id)
+            messages.error(request, 'Please correct the errors below.')
     else:
+        print("\n--- GET Request - Displaying empty form ---")
         form = StudentForm(request=request)
+        print(f"Form instance PK: {form.instance.pk}")
     
     return render(request, 'students/student_form.html', {
         'form': form,
         'title': 'Add New Student'
     })
 
+
+    
 @login_required
 @admin_required
 def student_edit(request, student_id):
@@ -231,56 +285,94 @@ def student_dashboard(request):
         messages.error(request, 'Student profile not found. Please contact administrator.')
         return redirect('dashboard:home')
     
-    # Get current term results
-    from academics.models import AcademicYear, Term, Result
-    current_year = AcademicYear.objects.filter(is_current=True).first()
-    current_term = Term.objects.filter(academic_year=current_year, is_current=True).first()
-    
-    if current_term:
-        results = Result.objects.filter(student=student, exam__term=current_term).select_related('subject')
-        total_marks = sum(r.marks for r in results)
-        average = total_marks / len(results) if results else 0
-    else:
-        results = []
-        average = 0
-    
-    # Get attendance for current term
+    # Import models
+    from academics.models import AcademicYear, Term, Result, Exam
     from attendance.models import Attendance
-    attendance = Attendance.objects.filter(
-        student=student,
-        date__gte=current_term.start_date if current_term else None,
-        date__lte=current_term.end_date if current_term else None
-    )
-    total_days = attendance.count()
-    present_days = attendance.filter(status='present').count()
-    attendance_percentage = (present_days / total_days * 100) if total_days > 0 else 0
-    
-    # Get financial summary
     from finance.models import Invoice, Payment
-    from django.db.models import Sum
-    invoices = Invoice.objects.filter(student=student).order_by('-created_at')[:5]
-    total_paid = Payment.objects.filter(student=student, payment_status='completed').aggregate(total=Sum('amount'))['total'] or 0
+    from django.db.models import Sum, Avg
+    from django.utils import timezone
     
-    # Get upcoming events
-    from academics.models import Exam
-    upcoming_exams = Exam.objects.filter(
-        term=current_term,
-        date__gte=timezone.now().date()
-    ).order_by('date')[:5]
+    # Get current term - handle None case
+    current_year = AcademicYear.objects.filter(is_current=True).first()
+    current_term = None
+    if current_year:
+        current_term = Term.objects.filter(academic_year=current_year, is_current=True).first()
+    
+    # Initialize variables with default values
+    results = []
+    average = 0
+    total_points = 0
+    term_average = 0
+    term_subjects = 0
+    total_days = 0
+    present_days = 0
+    attendance_percentage = 0
+    upcoming_exams = []
+    
+    # Only query if current_term exists
+    if current_term:
+        # Get results for current term
+        results = Result.objects.filter(
+            student=student, 
+            exam__term=current_term
+        ).select_related('subject')
+        
+        if results.exists():
+            total_marks = sum(r.marks for r in results)
+            term_average = total_marks / len(results)
+            term_subjects = len(results)
+            # Calculate total points
+            total_points = sum(r.points or 0 for r in results)
+        
+        # Get attendance for current term
+        attendance = Attendance.objects.filter(
+            student=student,
+            date__gte=current_term.start_date,
+            date__lte=current_term.end_date
+        )
+        total_days = attendance.count()
+        present_days = attendance.filter(status='present').count()
+        attendance_percentage = (present_days / total_days * 100) if total_days > 0 else 0
+        
+        # Get upcoming exams
+        upcoming_exams = Exam.objects.filter(
+            term=current_term,
+            start_date__gte=timezone.now().date()
+        ).order_by('start_date')[:5]
+    
+    # Get financial summary (doesn't depend on term)
+    invoices = Invoice.objects.filter(student=student).order_by('-created_at')[:5]
+    total_paid = Payment.objects.filter(
+        student=student, 
+        payment_status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Get clubs and sports
+    clubs = student.clubs.all()
+    sports = student.sports.all()
+    
+    # Get recent results for display (last 10 regardless of term)
+    recent_results = Result.objects.filter(
+        student=student
+    ).select_related('subject', 'exam').order_by('-exam__start_date')[:10]
     
     context = {
         'student': student,
         'current_term': current_term,
         'results': results,
-        'average': average,
+        'recent_results': recent_results,
+        'average': term_average,
+        'term_average': term_average,
+        'term_subjects': term_subjects,
+        'total_points': total_points,
         'attendance_percentage': attendance_percentage,
         'present_days': present_days,
         'total_days': total_days,
         'invoices': invoices,
         'total_paid': total_paid,
         'upcoming_exams': upcoming_exams,
-        'clubs': student.clubs.all(),
-        'sports': student.sports.all(),
+        'clubs': clubs,
+        'sports': sports,
     }
     
     return render(request, 'students/dashboard.html', context)

@@ -2,64 +2,97 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .models import (
     Conversation, Message, Announcement, Notification,
-    BroadcastList, MessageTemplate, EmailLog, SMSLog
+    BroadcastList, MessageTemplate
 )
 from accounts.models import User
 from students.models import Student
-from django.utils import timezone
 import datetime
+from django.utils import timezone
 
 class ComposeMessageForm(forms.Form):
     """Form for composing new messages"""
     
-    recipients = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True),
-        widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%'}),
-        required=False
-    )
     recipient_type = forms.ChoiceField(
         choices=[
-            ('', 'Select Recipient Type'),
+            ('individual', 'Individual'),
             ('all_students', 'All Students'),
             ('all_teachers', 'All Teachers'),
             ('all_parents', 'All Parents'),
             ('class', 'Specific Class'),
             ('broadcast', 'Broadcast List'),
         ],
-        required=False
-    )
-    class_level = forms.ChoiceField(
-        choices=[('', 'Select Class')] + list(Student.CLASS_LEVELS),
-        required=False
-    )
-    stream = forms.ChoiceField(
-        choices=[('', 'Select Stream')] + list(Student.STREAMS),
-        required=False
-    )
-    broadcast_list = forms.ModelChoiceField(
-        queryset=BroadcastList.objects.all(),
-        required=False
+        required=True,
+        initial='individual',
+        widget=forms.Select(attrs={'class': 'hidden'})  # Hidden as we use buttons
     )
     
-    subject = forms.CharField(max_length=200, required=False)
-    content = forms.CharField(widget=forms.Textarea(attrs={'rows': 6}))
-    attachment = forms.FileField(required=False)
+    recipients = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%'})
+    )
+    
+    class_level = forms.ChoiceField(
+        choices=[('', 'Select Class')] + [(1, 'Form 1'), (2, 'Form 2'), (3, 'Form 3'), (4, 'Form 4')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'glass-input'})
+    )
+    
+    stream = forms.ChoiceField(
+        choices=[('', 'Select Stream')] + [('East', 'East'), ('West', 'West'), ('North', 'North'), ('South', 'South')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'glass-input'})
+    )
+    
+    broadcast_list = forms.ModelChoiceField(
+        queryset=BroadcastList.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'glass-input'})
+    )
+    
+    subject = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'Enter message subject'})
+    )
+    
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'glass-input', 'rows': 6, 'placeholder': 'Type your message here...'}),
+        required=True
+    )
+    
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'glass-input'})
+    )
     
     def clean(self):
         cleaned_data = super().clean()
-        recipients = cleaned_data.get('recipients')
         recipient_type = cleaned_data.get('recipient_type')
         
-        if not recipients and not recipient_type:
-            raise ValidationError('Please select recipients.')
+        if recipient_type == 'individual' and not cleaned_data.get('recipients'):
+            raise ValidationError('Please select at least one recipient.')
+        elif recipient_type == 'class':
+            class_level = cleaned_data.get('class_level')
+            stream = cleaned_data.get('stream')
+            if not class_level or not stream:
+                raise ValidationError('Please select both class level and stream.')
+        elif recipient_type == 'broadcast' and not cleaned_data.get('broadcast_list'):
+            raise ValidationError('Please select a broadcast list.')
         
         return cleaned_data
 
 class ReplyMessageForm(forms.Form):
     """Form for replying to messages"""
     
-    content = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}))
-    attachment = forms.FileField(required=False)
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'glass-input', 'rows': 4, 'placeholder': 'Type your reply...'}),
+        required=True
+    )
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'glass-input'})
+    )
 
 class AnnouncementForm(forms.ModelForm):
     """Form for creating announcements"""
@@ -72,9 +105,14 @@ class AnnouncementForm(forms.ModelForm):
             'attachment'
         ]
         widgets = {
-            'publish_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'expiry_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'content': forms.Textarea(attrs={'rows': 6}),
+            'publish_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'glass-input'}),
+            'expiry_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'glass-input'}),
+            'content': forms.Textarea(attrs={'class': 'glass-input', 'rows': 6}),
+            'title': forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'Enter announcement title'}),
+            'audience_type': forms.Select(attrs={'class': 'glass-input', 'id': 'audienceType'}),
+            'target_class_level': forms.Select(attrs={'class': 'glass-input', 'id': 'targetClass'}),
+            'target_stream': forms.Select(attrs={'class': 'glass-input', 'id': 'targetStream'}),
+            'priority': forms.Select(attrs={'class': 'glass-input'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -85,7 +123,7 @@ class AnnouncementForm(forms.ModelForm):
         self.fields['attachment'].required = False
         
         # Set initial publish date to now
-        self.fields['publish_date'].initial = timezone.now()
+        self.fields['publish_date'].initial = timezone.now().strftime('%Y-%m-%dT%H:%M')
     
     def clean(self):
         cleaned_data = super().clean()
@@ -110,7 +148,11 @@ class BroadcastListForm(forms.ModelForm):
         model = BroadcastList
         fields = ['name', 'description', 'filter_by_role', 'filter_by_class', 'filter_by_stream']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
+            'name': forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'Enter list name'}),
+            'description': forms.Textarea(attrs={'class': 'glass-input', 'rows': 3, 'placeholder': 'Describe the purpose of this list'}),
+            'filter_by_role': forms.Select(attrs={'class': 'glass-input', 'id': 'filterRole'}),
+            'filter_by_class': forms.Select(attrs={'class': 'glass-input', 'id': 'filterClass'}),
+            'filter_by_stream': forms.Select(attrs={'class': 'glass-input', 'id': 'filterStream'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -127,7 +169,10 @@ class MessageTemplateForm(forms.ModelForm):
         model = MessageTemplate
         fields = ['name', 'template_type', 'subject', 'content', 'variables']
         widgets = {
-            'content': forms.Textarea(attrs={'rows': 6}),
+            'name': forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'e.g., Fee Reminder, Exam Notification'}),
+            'template_type': forms.Select(attrs={'class': 'glass-input'}),
+            'subject': forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'Subject with {{ variables }}'}),
+            'content': forms.Textarea(attrs={'class': 'glass-input font-mono', 'rows': 10}),
             'variables': forms.HiddenInput(),
         }
     
@@ -151,9 +196,17 @@ class NotificationSettingsForm(forms.Form):
 class FilterMessagesForm(forms.Form):
     """Form for filtering messages"""
     
-    search = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={
-        'placeholder': 'Search messages...'
-    }))
-    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
-    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    search = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'glass-input', 'placeholder': 'Search messages...'})
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'glass-input', 'type': 'date'})
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'glass-input', 'type': 'date'})
+    )
     unread_only = forms.BooleanField(required=False)

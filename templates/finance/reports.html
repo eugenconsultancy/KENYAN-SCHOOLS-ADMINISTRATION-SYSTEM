@@ -1,0 +1,454 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Financial Reports - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Financial Reports{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Total Collections</p>
+                    <p class="text-2xl font-bold text-white">KSh {{ total_collections|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-400 text-xl"></i>
+                </div>
+            </div>
+            <p class="text-xs text-white/40 mt-2">{{ current_year }} Year to Date</p>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Outstanding Fees</p>
+                    <p class="text-2xl font-bold text-red-400">KSh {{ outstanding_fees|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-exclamation-circle text-red-400 text-xl"></i>
+                </div>
+            </div>
+            <p class="text-xs text-white/40 mt-2">{{ overdue_count }} Overdue Invoices</p>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Total Expenses</p>
+                    <p class="text-2xl font-bold text-yellow-400">KSh {{ total_expenses|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-receipt text-yellow-400 text-xl"></i>
+                </div>
+            </div>
+            <p class="text-xs text-white/40 mt-2">{{ current_month }} Month to Date</p>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Net Position</p>
+                    <p class="text-2xl font-bold {% if net_position >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                        KSh {{ net_position|floatformat:2 }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-line text-blue-400 text-xl"></i>
+                </div>
+            </div>
+            <p class="text-xs text-white/40 mt-2">Collections - Expenses</p>
+        </div>
+    </div>
+
+    <!-- Report Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Collection Reports -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-green-600/20 to-emerald-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-money-bill-wave text-green-400 mr-2"></i>
+                    Collection Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'finance:collection_report' %}?period=today" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Daily Collections</p>
+                            <p class="text-xs text-white/40">{{ today|date:"d M Y" }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:collection_report' %}?period=week" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Weekly Collections</p>
+                            <p class="text-xs text-white/40">{{ week_start|date:"d M" }} - {{ today|date:"d M Y" }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:collection_report' %}?period=month" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Monthly Collections</p>
+                            <p class="text-xs text-white/40">{{ today|date:"F Y" }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:collection_report' %}?period=term" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Term Collections</p>
+                            <p class="text-xs text-white/40">{{ current_term }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:collection_report' %}?period=custom" 
+                   class="block p-3 bg-blue-600/30 rounded-lg hover:bg-blue-600/40 transition-colors mt-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white font-medium">Custom Date Range</span>
+                        <i class="fas fa-calendar-alt text-white/60"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Outstanding Reports -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-red-600/20 to-orange-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                    Outstanding Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'finance:outstanding_report' %}?type=all" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">All Outstanding Fees</p>
+                            <p class="text-xs text-white/40">Total: KSh {{ outstanding_fees|floatformat:2 }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:outstanding_report' %}?type=overdue" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Overdue Invoices</p>
+                            <p class="text-xs text-white/40">{{ overdue_count }} invoices overdue</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:outstanding_report' %}?type=by_class" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">By Class</p>
+                            <p class="text-xs text-white/40">Breakdown by form and stream</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:outstanding_report' %}?type=top_defaulters" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Top Defaulters</p>
+                            <p class="text-xs text-white/40">Highest outstanding balances</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Expense Reports -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-600/20 to-amber-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-receipt text-yellow-400 mr-2"></i>
+                    Expense Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'finance:expense_report' %}?period=month" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Monthly Expenses</p>
+                            <p class="text-xs text-white/40">{{ today|date:"F Y" }}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:expense_report' %}?by=category" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">By Category</p>
+                            <p class="text-xs text-white/40">Expense breakdown by category</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:budget_report' current_year %}" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Budget vs Actual</p>
+                            <p class="text-xs text-white/40">{{ current_year }} Budget Analysis</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Student Statements -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-user-graduate text-blue-400 mr-2"></i>
+                    Student Statements
+                </h3>
+            </div>
+            <div class="p-6">
+                <form action="{% url 'finance:student_statement' 0 %}" method="GET" id="studentStatementForm">
+                    <div class="space-y-3">
+                        <select name="student_id" id="studentSelect" class="glass-input select2" required>
+                            <option value="">Select Student</option>
+                            {% for student in students %}
+                            <option value="{{ student.id }}">
+                                {{ student.get_full_name }} ({{ student.admission_number }}) - Form {{ student.current_class }} {{ student.stream }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" name="start_date" class="glass-input" placeholder="Start Date">
+                            <input type="date" name="end_date" class="glass-input" placeholder="End Date">
+                        </div>
+                        
+                        <button type="submit" class="glass-button w-full">
+                            <i class="fas fa-file-pdf mr-2"></i>Generate Statement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tax Reports -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-600/20 to-pink-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-calculator text-purple-400 mr-2"></i>
+                    Tax Reports
+                </h3>
+            </div>
+            <div class="p-6 space-y-3">
+                <a href="{% url 'finance:tax_report' %}?type=vat" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">VAT Summary</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+                
+                <a href="{% url 'finance:tax_report' %}?type=withholding" 
+                   class="block p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-white">Withholding Tax</span>
+                        <i class="fas fa-chevron-right text-white/40"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Custom Report Builder -->
+        <div class="glass-card overflow-hidden">
+            <div class="bg-gradient-to-r from-gray-600/20 to-slate-600/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-sliders-h text-gray-400 mr-2"></i>
+                    Custom Report
+                </h3>
+            </div>
+            <div class="p-6">
+                <a href="{% url 'finance:custom_report' %}" class="glass-button w-full">
+                    <i class="fas fa-plus-circle mr-2"></i>Build Custom Report
+                </a>
+                <p class="text-xs text-white/40 text-center mt-3">
+                    Select date range, metrics, and format
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Monthly Collections Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Monthly Collections</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="collectionsChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Expense Categories Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Expenses by Category</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="expensesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Reports -->
+    {% if recent_reports %}
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recently Generated Reports</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for report in recent_reports %}
+                <div class="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-file-pdf text-red-400 text-2xl mr-3"></i>
+                            <div>
+                                <p class="text-white font-medium">{{ report.title }}</p>
+                                <p class="text-xs text-white/40">{{ report.generated_at|date:"d M Y H:i" }}</p>
+                            </div>
+                        </div>
+                        <a href="{{ report.file.url }}" download class="text-white/60 hover:text-white">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Monthly Collections Chart
+    const collectionsCtx = document.getElementById('collectionsChart').getContext('2d');
+    new Chart(collectionsCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [{
+                label: 'Collections (KSh)',
+                data: {{ monthly_collections|safe }},
+                backgroundColor: 'rgba(34, 197, 94, 0.5)',
+                borderColor: 'rgb(34, 197, 94)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            return 'KSh ' + value.toLocaleString();
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Expenses by Category Chart
+    const expensesCtx = document.getElementById('expensesChart').getContext('2d');
+    new Chart(expensesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ expense_categories|safe }},
+            datasets: [{
+                data: {{ expense_amounts|safe }},
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(139, 92, 246, 0.8)'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+</style>
+{% endblock %}

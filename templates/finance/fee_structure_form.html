@@ -1,0 +1,421 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if fee_structure %}Edit{% else %}Create{% endif %} Fee Structure - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if fee_structure %}Edit Fee Structure{% else %}Create New Fee Structure{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="feeStructureForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            Fee Structure Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.name.name }}" id="nameField" 
+                               value="{{ form.name.value|default:'' }}" 
+                               class="glass-input" 
+                               placeholder="e.g., Form 1 - Term 1 2024 Fee Structure"
+                               required>
+                        {% if form.name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.academic_year.id_for_label }}" class="form-label">
+                            Academic Year <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.academic_year.name }}" id="academicYear" class="glass-input" required>
+                            <option value="">Select Year</option>
+                            {% for year in form.academic_year.field.queryset %}
+                            <option value="{{ year.id }}" {% if form.academic_year.value == year.id %}selected{% endif %}>
+                                {{ year.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.academic_year.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.academic_year.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.term.id_for_label }}" class="form-label">
+                            Term <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.term.name }}" id="term" class="glass-input" required>
+                            <option value="">Select Term</option>
+                            {% for value, label in form.term.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.term.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.term.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.term.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.class_level.id_for_label }}" class="form-label">
+                            Class Level <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.class_level.name }}" id="classLevel" class="glass-input" required>
+                            <option value="">Select Class</option>
+                            {% for value, label in form.class_level.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.class_level.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.class_level.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.class_level.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fee Breakdown -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Fee Breakdown</h3>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.tuition_fee.id_for_label }}" class="form-label">
+                                Tuition Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.tuition_fee.name }}" id="tuitionFee" 
+                                       value="{{ form.tuition_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.boarding_fee.id_for_label }}" class="form-label">
+                                Boarding Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.boarding_fee.name }}" id="boardingFee" 
+                                       value="{{ form.boarding_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.transport_fee.id_for_label }}" class="form-label">
+                                Transport Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.transport_fee.name }}" id="transportFee" 
+                                       value="{{ form.transport_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.library_fee.id_for_label }}" class="form-label">
+                                Library Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.library_fee.name }}" id="libraryFee" 
+                                       value="{{ form.library_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.sports_fee.id_for_label }}" class="form-label">
+                                Sports Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.sports_fee.name }}" id="sportsFee" 
+                                       value="{{ form.sports_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.medical_fee.id_for_label }}" class="form-label">
+                                Medical Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.medical_fee.name }}" id="medicalFee" 
+                                       value="{{ form.medical_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.development_fee.id_for_label }}" class="form-label">
+                                Development Fee
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.development_fee.name }}" id="developmentFee" 
+                                       value="{{ form.development_fee.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="{{ form.other_fees.id_for_label }}" class="form-label">
+                                Other Fees
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" name="{{ form.other_fees.name }}" id="otherFees" 
+                                       value="{{ form.other_fees.value|default:'0' }}" 
+                                       class="glass-input pl-12 fee-amount" 
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Summary -->
+            <div class="mb-6 p-4 bg-blue-500/10 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-white font-medium">Total Fee:</span>
+                    <span class="text-2xl font-bold text-blue-400" id="totalFee">KSh 0.00</span>
+                </div>
+            </div>
+
+            <!-- Payment Terms -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Payment Terms</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.payment_deadline.id_for_label }}" class="form-label">
+                            Payment Deadline <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.payment_deadline.name }}" id="paymentDeadline" 
+                               value="{{ form.payment_deadline.value|date:'Y-m-d'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.payment_deadline.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.payment_deadline.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.late_payment_penalty.id_for_label }}" class="form-label">
+                            Late Payment Penalty (KSh)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.late_payment_penalty.name }}" id="latePenalty" 
+                                   value="{{ form.late_payment_penalty.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                        {% if form.late_payment_penalty.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.late_payment_penalty.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="mb-6">
+                <label class="flex items-center">
+                    <input type="checkbox" name="{{ form.is_active.name }}" id="isActive" 
+                           {% if form.is_active.value %}checked{% endif %} 
+                           class="form-checkbox h-5 w-5 text-blue-600">
+                    <span class="ml-2 text-white">Active</span>
+                </label>
+                <p class="text-xs text-white/40 mt-1 ml-7">Inactive fee structures won't be used for new invoices</p>
+            </div>
+
+            <!-- Quick Templates -->
+            <div class="mb-6">
+                <h4 class="text-white font-medium mb-3">Quick Templates</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="loadTemplate('form1')" class="glass-button text-sm py-2">
+                        Form 1 Template
+                    </button>
+                    <button type="button" onclick="loadTemplate('form2')" class="glass-button text-sm py-2">
+                        Form 2 Template
+                    </button>
+                    <button type="button" onclick="loadTemplate('form3')" class="glass-button text-sm py-2">
+                        Form 3 Template
+                    </button>
+                    <button type="button" onclick="loadTemplate('form4')" class="glass-button text-sm py-2">
+                        Form 4 Template
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:fee_structure_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if fee_structure %}Update{% else %}Create{% endif %} Fee Structure
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Calculate total fee
+    function calculateTotal() {
+        const feeInputs = document.querySelectorAll('.fee-amount');
+        let total = 0;
+        
+        feeInputs.forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+        
+        document.getElementById('totalFee').textContent = `KSh ${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    // Add event listeners to all fee inputs
+    document.querySelectorAll('.fee-amount').forEach(input => {
+        input.addEventListener('input', calculateTotal);
+    });
+
+    // Auto-generate name
+    function generateName() {
+        const year = document.getElementById('academicYear');
+        const term = document.getElementById('term');
+        const classLevel = document.getElementById('classLevel');
+        const nameField = document.getElementById('nameField');
+        
+        if (year.options[year.selectedIndex] && term.value && classLevel.value) {
+            const yearText = year.options[year.selectedIndex].text;
+            const termText = term.options[term.selectedIndex].text;
+            const classText = classLevel.options[classLevel.selectedIndex].text;
+            
+            nameField.value = `${classText} - ${termText} ${yearText} Fee Structure`;
+        }
+    }
+
+    document.getElementById('academicYear').addEventListener('change', generateName);
+    document.getElementById('term').addEventListener('change', generateName);
+    document.getElementById('classLevel').addEventListener('change', generateName);
+
+    // Load templates
+    function loadTemplate(template) {
+        const templates = {
+            'form1': {
+                tuition: 30000,
+                boarding: 15000,
+                transport: 5000,
+                library: 2000,
+                sports: 1500,
+                medical: 1000,
+                development: 3000,
+                other: 1000
+            },
+            'form2': {
+                tuition: 35000,
+                boarding: 15000,
+                transport: 5000,
+                library: 2000,
+                sports: 1500,
+                medical: 1000,
+                development: 3000,
+                other: 1000
+            },
+            'form3': {
+                tuition: 40000,
+                boarding: 20000,
+                transport: 5000,
+                library: 2000,
+                sports: 1500,
+                medical: 1000,
+                development: 3000,
+                other: 1000
+            },
+            'form4': {
+                tuition: 45000,
+                boarding: 20000,
+                transport: 5000,
+                library: 2000,
+                sports: 1500,
+                medical: 1000,
+                development: 3000,
+                other: 1000
+            }
+        };
+
+        const data = templates[template];
+        if (data) {
+            document.getElementById('tuitionFee').value = data.tuition;
+            document.getElementById('boardingFee').value = data.boarding;
+            document.getElementById('transportFee').value = data.transport;
+            document.getElementById('libraryFee').value = data.library;
+            document.getElementById('sportsFee').value = data.sports;
+            document.getElementById('medicalFee').value = data.medical;
+            document.getElementById('developmentFee').value = data.development;
+            document.getElementById('otherFees').value = data.other;
+            
+            calculateTotal();
+        }
+    }
+
+    // Set default payment deadline (30 days from now)
+    if (!document.getElementById('paymentDeadline').value) {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        document.getElementById('paymentDeadline').value = date.toISOString().split('T')[0];
+    }
+
+    // Initial calculation
+    calculateTotal();
+</script>
+{% endblock %}

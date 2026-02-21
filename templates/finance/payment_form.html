@@ -1,0 +1,401 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if payment %}Edit{% else %}Record{% endif %} Payment - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if payment %}Edit Payment{% else %}Record New Payment{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="paymentForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Student Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Student Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.student.id_for_label }}" class="form-label">
+                            Student <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.student.name }}" id="studentSelect" class="glass-input select2" required>
+                            <option value="">Select Student</option>
+                            {% for student in form.student.field.queryset %}
+                            <option value="{{ student.id }}" {% if form.student.value == student.id %}selected{% endif %}>
+                                {{ student.get_full_name }} ({{ student.admission_number }}) - Form {{ student.current_class }} {{ student.stream }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.student.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.student.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.invoice.id_for_label }}" class="form-label">
+                            Invoice (Optional)
+                        </label>
+                        <select name="{{ form.invoice.name }}" id="invoiceSelect" class="glass-input select2">
+                            <option value="">Select Invoice (Optional)</option>
+                            {% for invoice in form.invoice.field.queryset %}
+                            <option value="{{ invoice.id }}" 
+                                    data-student="{{ invoice.student.id }}"
+                                    data-total="{{ invoice.total_amount }}"
+                                    data-balance="{{ invoice.balance }}"
+                                    {% if form.invoice.value == invoice.id %}selected{% endif %}>
+                                {{ invoice.invoice_number }} - KSh {{ invoice.balance|floatformat:2 }} ({{ invoice.get_status_display }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.invoice.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.invoice.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details Card (Shown when invoice selected) -->
+            <div id="invoiceDetails" class="hidden mb-6 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Invoice Details</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-white/60">Invoice Number:</span>
+                        <span class="text-white ml-2" id="invoiceNumber">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Total Amount:</span>
+                        <span class="text-white ml-2" id="invoiceTotal">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Outstanding Balance:</span>
+                        <span class="text-yellow-400 ml-2 font-bold" id="invoiceBalance">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Status:</span>
+                        <span class="ml-2" id="invoiceStatus">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Payment Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.amount.id_for_label }}" class="form-label">
+                            Amount <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.amount.name }}" id="amountField" 
+                                   value="{{ form.amount.value|default:'' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="1" required>
+                        </div>
+                        {% if form.amount.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.amount.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.payment_date.id_for_label }}" class="form-label">
+                            Payment Date & Time <span class="text-red-400">*</span>
+                        </label>
+                        <input type="datetime-local" name="{{ form.payment_date.name }}" id="paymentDate" 
+                               value="{{ form.payment_date.value|date:'Y-m-d\TH:i'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.payment_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.payment_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.payment_method.id_for_label }}" class="form-label">
+                            Payment Method <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.payment_method.name }}" id="paymentMethod" class="glass-input" required>
+                            <option value="">Select Method</option>
+                            {% for value, label in form.payment_method.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.payment_method.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.payment_method.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Reference (Dynamic based on method) -->
+            <div id="mpesaFields" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">M-Pesa Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.mpesa_code.id_for_label }}" class="form-label">
+                            M-Pesa Transaction Code <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.mpesa_code.name }}" id="mpesaCode" 
+                               value="{{ form.mpesa_code.value|default:'' }}" 
+                               class="glass-input" placeholder="e.g., QW78Y9U0I1P2">
+                    </div>
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                            Phone Number
+                        </label>
+                        <input type="text" name="phone_number" id="phoneNumber" 
+                               value="" class="glass-input" placeholder="0712345678">
+                    </div>
+                </div>
+            </div>
+
+            <div id="bankFields" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Bank Transfer Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.bank_name.id_for_label }}" class="form-label">
+                            Bank Name
+                        </label>
+                        <input type="text" name="{{ form.bank_name.name }}" id="bankName" 
+                               value="{{ form.bank_name.value|default:'' }}" 
+                               class="glass-input" placeholder="e.g., Equity Bank">
+                    </div>
+                    <div>
+                        <label for="{{ form.reference_number.id_for_label }}" class="form-label">
+                            Reference Number
+                        </label>
+                        <input type="text" name="{{ form.reference_number.name }}" id="referenceNumber" 
+                               value="{{ form.reference_number.value|default:'' }}" 
+                               class="glass-input" placeholder="Transaction reference">
+                    </div>
+                </div>
+            </div>
+
+            <div id="chequeFields" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Cheque Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.cheque_number.id_for_label }}" class="form-label">
+                            Cheque Number
+                        </label>
+                        <input type="text" name="{{ form.cheque_number.name }}" id="chequeNumber" 
+                               value="{{ form.cheque_number.value|default:'' }}" 
+                               class="glass-input" placeholder="Cheque number">
+                    </div>
+                    <div>
+                        <label for="{{ form.bank_name.id_for_label }}" class="form-label">
+                            Bank Name
+                        </label>
+                        <input type="text" name="{{ form.bank_name.name }}" id="chequeBankName" 
+                               value="{{ form.bank_name.value|default:'' }}" 
+                               class="glass-input" placeholder="Bank name">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                    Notes (Optional)
+                </label>
+                <textarea name="{{ form.notes.name }}" id="notes" rows="3" 
+                          class="glass-input" placeholder="Add any additional notes...">{{ form.notes.value|default:'' }}</textarea>
+                {% if form.notes.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Receipt Preview -->
+            <div class="bg-green-500/10 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-2">Receipt Preview</h4>
+                <div id="receiptPreview" class="text-sm">
+                    <p class="text-white/80">Complete the form to generate receipt</p>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:payment_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-green-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if payment %}Update{% else %}Record{% endif %} Payment
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button type="button" onclick="setToday()" class="glass-button text-sm">
+                <i class="fas fa-clock mr-2"></i>Set to Today
+            </button>
+            <button type="button" onclick="quickAmount(1000)" class="glass-button text-sm">
+                <i class="fas fa-coins mr-2"></i>KSh 1,000
+            </button>
+            <button type="button" onclick="quickAmount(5000)" class="glass-button text-sm">
+                <i class="fas fa-coins mr-2"></i>KSh 5,000
+            </button>
+            <button type="button" onclick="quickAmount(10000)" class="glass-button text-sm">
+                <i class="fas fa-coins mr-2"></i>KSh 10,000
+            </button>
+            <button type="button" onclick="quickAmount(20000)" class="glass-button text-sm">
+                <i class="fas fa-coins mr-2"></i>KSh 20,000
+            </button>
+            <button type="button" onclick="setFullPayment()" class="glass-button text-sm bg-blue-600/50">
+                <i class="fas fa-check-circle mr-2"></i>Full Payment
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Include Select2 CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Search...",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Invoice selection handling
+    const studentSelect = document.getElementById('studentSelect');
+    const invoiceSelect = document.getElementById('invoiceSelect');
+    const invoiceDetails = document.getElementById('invoiceDetails');
+    const amountField = document.getElementById('amountField');
+
+    invoiceSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value) {
+            const balance = selected.dataset.balance;
+            const total = selected.dataset.total;
+            const invoiceNumber = selected.text.split(' - ')[0];
+            const status = selected.text.includes('paid') ? 'Paid' : 
+                          selected.text.includes('partial') ? 'Partially Paid' : 'Pending';
+            
+            document.getElementById('invoiceNumber').textContent = invoiceNumber;
+            document.getElementById('invoiceTotal').textContent = `KSh ${parseFloat(total).toLocaleString()}`;
+            document.getElementById('invoiceBalance').textContent = `KSh ${parseFloat(balance).toLocaleString()}`;
+            document.getElementById('invoiceStatus').innerHTML = `<span class="badge badge-info">${status}</span>`;
+            
+            invoiceDetails.classList.remove('hidden');
+            
+            // Suggest amount as balance
+            amountField.value = balance;
+            updateReceiptPreview();
+        } else {
+            invoiceDetails.classList.add('hidden');
+        }
+    });
+
+    // Payment method fields
+    const paymentMethod = document.getElementById('paymentMethod');
+    const mpesaFields = document.getElementById('mpesaFields');
+    const bankFields = document.getElementById('bankFields');
+    const chequeFields = document.getElementById('chequeFields');
+
+    paymentMethod.addEventListener('change', function() {
+        mpesaFields.classList.add('hidden');
+        bankFields.classList.add('hidden');
+        chequeFields.classList.add('hidden');
+        
+        if (this.value === 'mpesa') {
+            mpesaFields.classList.remove('hidden');
+        } else if (this.value === 'bank_transfer') {
+            bankFields.classList.remove('hidden');
+        } else if (this.value === 'cheque') {
+            chequeFields.classList.remove('hidden');
+        }
+    });
+
+    // Receipt preview
+    function updateReceiptPreview() {
+        const student = studentSelect.options[studentSelect.selectedIndex]?.text.split(' - ')[0] || 'Student';
+        const amount = amountField.value || '0';
+        const date = document.getElementById('paymentDate').value ? 
+            new Date(document.getElementById('paymentDate').value).toLocaleString() : 
+            'Not set';
+        const method = paymentMethod.options[paymentMethod.selectedIndex]?.text || 'Not selected';
+        
+        const preview = document.getElementById('receiptPreview');
+        preview.innerHTML = `
+            <div class="border border-white/10 rounded-lg p-3">
+                <p class="text-white font-bold mb-2">RECEIPT</p>
+                <p class="text-white/80">Student: ${student}</p>
+                <p class="text-white/80">Amount: KSh ${parseFloat(amount).toLocaleString()}</p>
+                <p class="text-white/80">Date: ${date}</p>
+                <p class="text-white/80">Method: ${method}</p>
+            </div>
+        `;
+    }
+
+    studentSelect.addEventListener('change', updateReceiptPreview);
+    amountField.addEventListener('input', updateReceiptPreview);
+    document.getElementById('paymentDate').addEventListener('change', updateReceiptPreview);
+    paymentMethod.addEventListener('change', updateReceiptPreview);
+
+    // Quick actions
+    function setToday() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('paymentDate').value = now.toISOString().slice(0,16);
+        updateReceiptPreview();
+    }
+
+    function quickAmount(amount) {
+        amountField.value = amount;
+        updateReceiptPreview();
+    }
+
+    function setFullPayment() {
+        if (invoiceSelect.value) {
+            const selected = invoiceSelect.options[invoiceSelect.selectedIndex];
+            amountField.value = selected.dataset.balance;
+            updateReceiptPreview();
+        }
+    }
+
+    // Initialize
+    setToday();
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+    
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+        color: white;
+        line-height: 45px;
+    }
+    
+    .select2-container--classic .select2-results__option {
+        background-color: #1e293b;
+        color: white;
+    }
+</style>
+{% endblock %}

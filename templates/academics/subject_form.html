@@ -1,0 +1,401 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if subject %}Edit{% else %}Create{% endif %} Subject - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if subject %}Edit Subject{% else %}Create New Subject{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            Subject Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.name.name }}" id="nameField" 
+                               value="{{ form.name.value|default:'' }}" 
+                               class="glass-input" 
+                               placeholder="e.g., Mathematics, English, Biology"
+                               required>
+                        {% if form.name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.code.id_for_label }}" class="form-label">
+                            Subject Code <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.code.name }}" id="codeField" 
+                               value="{{ form.code.value|default:'' }}" 
+                               class="glass-input" 
+                               placeholder="e.g., MAT, ENG, BIO"
+                               required>
+                        {% if form.code.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.code.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/40 mt-1">Unique code, 3-6 characters</p>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            Category <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.category.name }}" id="categorySelect" class="glass-input" required>
+                            <option value="">Select Category</option>
+                            {% for category in form.category.field.queryset %}
+                            <option value="{{ category.id }}" {% if form.category.value == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.subject_type.id_for_label }}" class="form-label">
+                            Subject Type <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.subject_type.name }}" id="subjectType" class="glass-input" required>
+                            <option value="">Select Type</option>
+                            {% for value, label in form.subject_type.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.subject_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.subject_type.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.subject_type.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classes Offering Subject -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Classes Offering This Subject</h3>
+                <p class="text-sm text-white/60 mb-3">Select which forms offer this subject</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <label class="flex items-center space-x-2 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                        <input type="checkbox" name="classes" value="1" 
+                               {% if '1' in form.classes.value or 1 in form.classes.value %}checked{% endif %}
+                               class="form-checkbox h-5 w-5 text-blue-600 class-checkbox">
+                        <span class="text-white">Form 1</span>
+                    </label>
+                    
+                    <label class="flex items-center space-x-2 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                        <input type="checkbox" name="classes" value="2" 
+                               {% if '2' in form.classes.value or 2 in form.classes.value %}checked{% endif %}
+                               class="form-checkbox h-5 w-5 text-blue-600 class-checkbox">
+                        <span class="text-white">Form 2</span>
+                    </label>
+                    
+                    <label class="flex items-center space-x-2 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                        <input type="checkbox" name="classes" value="3" 
+                               {% if '3' in form.classes.value or 3 in form.classes.value %}checked{% endif %}
+                               class="form-checkbox h-5 w-5 text-blue-600 class-checkbox">
+                        <span class="text-white">Form 3</span>
+                    </label>
+                    
+                    <label class="flex items-center space-x-2 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                        <input type="checkbox" name="classes" value="4" 
+                               {% if '4' in form.classes.value or 4 in form.classes.value %}checked{% endif %}
+                               class="form-checkbox h-5 w-5 text-blue-600 class-checkbox">
+                        <span class="text-white">Form 4</span>
+                    </label>
+                </div>
+                
+                {% if form.classes.errors %}
+                <p class="text-sm text-red-400 mt-2">{{ form.classes.errors.0 }}</p>
+                {% endif %}
+                
+                <div id="classWarning" class="hidden mt-3 p-3 bg-yellow-500/10 rounded-lg">
+                    <p class="text-sm text-yellow-400">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Please select at least one class level.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Grading Configuration -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Grading Configuration</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.pass_mark.id_for_label }}" class="form-label">
+                            Pass Mark (%) <span class="text-red-400">*</span>
+                        </label>
+                        <input type="number" name="{{ form.pass_mark.name }}" id="passMark" 
+                               value="{{ form.pass_mark.value|default:'40' }}" 
+                               class="glass-input" 
+                               min="0" max="100" step="1" required>
+                        {% if form.pass_mark.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.pass_mark.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/40 mt-1">Minimum marks to pass (0-100)</p>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.max_mark.id_for_label }}" class="form-label">
+                            Maximum Marks <span class="text-red-400">*</span>
+                        </label>
+                        <input type="number" name="{{ form.max_mark.name }}" id="maxMark" 
+                               value="{{ form.max_mark.value|default:'100' }}" 
+                               class="glass-input" 
+                               min="1" max="500" step="1" required>
+                        {% if form.max_mark.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.max_mark.errors.0 }}</p>
+                        {% endif %}
+                        <p class="text-xs text-white/40 mt-1">Maximum possible marks (1-500)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-6">
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    Description (Optional)
+                </label>
+                <textarea name="{{ form.description.name }}" id="description" rows="4" 
+                          class="glass-input" 
+                          placeholder="Enter subject description, topics covered, etc.">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Status -->
+            <div class="mb-6">
+                <label class="flex items-center">
+                    <input type="checkbox" name="{{ form.is_active.name }}" id="isActive" 
+                           {% if form.is_active.value %}checked{% endif %} 
+                           class="form-checkbox h-5 w-5 text-blue-600">
+                    <span class="ml-2 text-white">Active Subject</span>
+                </label>
+                <p class="text-xs text-white/40 mt-1 ml-7">Inactive subjects won't appear in class allocations</p>
+            </div>
+
+            <!-- Subject Preview Card -->
+            <div class="bg-blue-500/10 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-3">Subject Preview</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-white/60">Name:</span>
+                        <span class="text-white ml-2" id="previewName">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Code:</span>
+                        <span class="text-white ml-2" id="previewCode">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Category:</span>
+                        <span class="text-white ml-2" id="previewCategory">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Type:</span>
+                        <span class="text-white ml-2" id="previewType">-</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-white/60">Classes:</span>
+                        <span class="text-white ml-2" id="previewClasses">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Templates -->
+            <div class="mb-6">
+                <h4 class="text-white font-medium mb-3">Quick Templates</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="loadTemplate('math')" class="glass-button text-sm py-2">
+                        Mathematics
+                    </button>
+                    <button type="button" onclick="loadTemplate('english')" class="glass-button text-sm py-2">
+                        English
+                    </button>
+                    <button type="button" onclick="loadTemplate('kiswahili')" class="glass-button text-sm py-2">
+                        Kiswahili
+                    </button>
+                    <button type="button" onclick="loadTemplate('science')" class="glass-button text-sm py-2">
+                        Sciences
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'academics:subject_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50" id="submitBtn">
+                    <i class="fas fa-save mr-2"></i>{% if subject %}Update{% else %}Create{% endif %} Subject
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Form validation
+    const classCheckboxes = document.querySelectorAll('.class-checkbox');
+    const classWarning = document.getElementById('classWarning');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function validateClasses() {
+        let checked = false;
+        classCheckboxes.forEach(cb => {
+            if (cb.checked) checked = true;
+        });
+        
+        if (!checked) {
+            classWarning.classList.remove('hidden');
+            submitBtn.disabled = true;
+            return false;
+        } else {
+            classWarning.classList.add('hidden');
+            submitBtn.disabled = false;
+            return true;
+        }
+    }
+
+    classCheckboxes.forEach(cb => {
+        cb.addEventListener('change', validateClasses);
+    });
+
+    // Live preview
+    function updatePreview() {
+        const name = document.getElementById('nameField').value;
+        const code = document.getElementById('codeField').value;
+        const category = document.getElementById('categorySelect');
+        const type = document.getElementById('subjectType');
+        
+        document.getElementById('previewName').textContent = name || '-';
+        document.getElementById('previewCode').textContent = code || '-';
+        document.getElementById('previewCategory').textContent = category.options[category.selectedIndex]?.text || '-';
+        document.getElementById('previewType').textContent = type.options[type.selectedIndex]?.text || '-';
+        
+        // Show selected classes
+        const selectedClasses = [];
+        classCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                selectedClasses.push(cb.nextElementSibling.textContent);
+            }
+        });
+        document.getElementById('previewClasses').textContent = selectedClasses.join(', ') || 'None';
+    }
+
+    document.getElementById('nameField').addEventListener('input', updatePreview);
+    document.getElementById('codeField').addEventListener('input', updatePreview);
+    document.getElementById('categorySelect').addEventListener('change', updatePreview);
+    document.getElementById('subjectType').addEventListener('change', updatePreview);
+    classCheckboxes.forEach(cb => cb.addEventListener('change', updatePreview));
+
+    // Load templates
+    function loadTemplate(template) {
+        const templates = {
+            'math': {
+                name: 'Mathematics',
+                code: 'MAT',
+                category: 'Mathematics',
+                type: 'compulsory',
+                classes: [1,2,3,4],
+                pass_mark: 40,
+                max_mark: 100
+            },
+            'english': {
+                name: 'English',
+                code: 'ENG',
+                category: 'Languages',
+                type: 'compulsory',
+                classes: [1,2,3,4],
+                pass_mark: 40,
+                max_mark: 100
+            },
+            'kiswahili': {
+                name: 'Kiswahili',
+                code: 'KIS',
+                category: 'Languages',
+                type: 'compulsory',
+                classes: [1,2,3,4],
+                pass_mark: 40,
+                max_mark: 100
+            },
+            'science': {
+                name: 'Biology',
+                code: 'BIO',
+                category: 'Sciences',
+                type: 'compulsory',
+                classes: [1,2,3,4],
+                pass_mark: 40,
+                max_mark: 100
+            }
+        };
+
+        const data = templates[template];
+        if (data) {
+            document.getElementById('nameField').value = data.name;
+            document.getElementById('codeField').value = data.code;
+            
+            // Set category (you'll need to map this based on your actual category IDs)
+            const categorySelect = document.getElementById('categorySelect');
+            for (let i = 0; i < categorySelect.options.length; i++) {
+                if (categorySelect.options[i].text.includes(data.category)) {
+                    categorySelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // Set type
+            const typeSelect = document.getElementById('subjectType');
+            for (let i = 0; i < typeSelect.options.length; i++) {
+                if (typeSelect.options[i].value === data.type) {
+                    typeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // Set classes
+            classCheckboxes.forEach(cb => {
+                const value = parseInt(cb.value);
+                cb.checked = data.classes.includes(value);
+            });
+            
+            document.getElementById('passMark').value = data.pass_mark;
+            document.getElementById('maxMark').value = data.max_mark;
+            
+            updatePreview();
+            validateClasses();
+        }
+    }
+
+    // Initialize
+    updatePreview();
+    validateClasses();
+
+    // Auto-uppercase code
+    document.getElementById('codeField').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+</script>
+{% endblock %}

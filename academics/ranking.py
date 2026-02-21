@@ -4,7 +4,8 @@ Handles student ranking calculations
 """
 
 from django.db.models import Avg, Sum, Count, Q
-from .models import Result, ResultSummary, Student, Class, Term
+from .models import Result, ResultSummary, Class, Term
+from students.models import Student
 from .grading import GradingSystem
 
 class RankingService:
@@ -153,6 +154,8 @@ class RankingService:
     @staticmethod
     def get_subject_ranking(subject, term, class_level=None):
         """Get ranking for a specific subject"""
+        from students.models import Student
+        
         results = Result.objects.filter(
             exam__term=term,
             subject=subject
@@ -186,6 +189,8 @@ class RankingService:
     @staticmethod
     def get_class_mean_score(term, class_level, stream=None):
         """Calculate mean score for a class"""
+        from students.models import Student
+        
         summaries = ResultSummary.objects.filter(
             term=term,
             student__current_class=class_level
@@ -238,6 +243,8 @@ class PerformanceAnalyzer:
     @staticmethod
     def analyze_class_performance(term, class_level):
         """Analyze performance for an entire class"""
+        from students.models import Student
+        
         summaries = ResultSummary.objects.filter(
             term=term,
             student__current_class=class_level
@@ -281,6 +288,8 @@ class PerformanceAnalyzer:
     @staticmethod
     def compare_streams(term, class_level):
         """Compare performance across streams"""
+        from students.models import Student
+        
         streams = ['East', 'West', 'North', 'South']
         stream_performance = {}
         
@@ -305,6 +314,7 @@ class PerformanceAnalyzer:
     def subject_performance_analysis(term, class_level=None):
         """Analyze performance by subject"""
         from .models import Subject
+        from students.models import Student
         
         subjects = Subject.objects.filter(is_active=True)
         analysis = {}

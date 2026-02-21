@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if expense %}Edit{% else %}Record{% endif %} Expense - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if expense %}Edit Expense{% else %}Record New Expense{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" id="expenseForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Expense Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Expense Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            Category <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.category.name }}" id="categorySelect" class="glass-input" required>
+                            <option value="">Select Category</option>
+                            {% for category in form.category.field.queryset %}
+                            <option value="{{ category.id }}" 
+                                    data-budget="{{ category.budget_allocation }}"
+                                    {% if form.category.value == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.expense_date.id_for_label }}" class="form-label">
+                            Expense Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.expense_date.name }}" id="expenseDate" 
+                               value="{{ form.expense_date.value|date:'Y-m-d'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.expense_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.expense_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                        Description <span class="text-red-400">*</span>
+                    </label>
+                    <textarea name="{{ form.description.name }}" id="description" rows="3" 
+                              class="glass-input" placeholder="Describe the expense in detail..." required>{{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="{{ form.amount.id_for_label }}" class="form-label">
+                            Amount <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.amount.name }}" id="amountField" 
+                                   value="{{ form.amount.value|default:'' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="1" required>
+                        </div>
+                        {% if form.amount.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.amount.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.payment_method.id_for_label }}" class="form-label">
+                            Payment Method <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.payment_method.name }}" id="paymentMethod" class="glass-input" required>
+                            <option value="">Select Method</option>
+                            {% for value, label in form.payment_method.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.payment_method.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.payment_method.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Status Card -->
+            <div id="budgetStatus" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Budget Status</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-white/60">Annual Budget:</span>
+                        <span class="text-white" id="budgetAllocated">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-white/60">Spent to Date:</span>
+                        <span class="text-white" id="budgetSpent">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-white/60">Remaining:</span>
+                        <span class="text-green-400 font-bold" id="budgetRemaining">-</span>
+                    </div>
+                    <div class="progress mt-2">
+                        <div id="budgetProgress" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p id="budgetWarning" class="text-xs text-yellow-400 hidden">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        This expense will exceed the budget!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Vendor Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Vendor Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.vendor_name.id_for_label }}" class="form-label">
+                            Vendor Name <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="{{ form.vendor_name.name }}" id="vendorName" 
+                               value="{{ form.vendor_name.value|default:'' }}" 
+                               class="glass-input" placeholder="Supplier/Contractor name" required>
+                        {% if form.vendor_name.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.vendor_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.vendor_phone.id_for_label }}" class="form-label">
+                            Phone Number
+                        </label>
+                        <input type="text" name="{{ form.vendor_phone.name }}" id="vendorPhone" 
+                               value="{{ form.vendor_phone.value|default:'' }}" 
+                               class="glass-input" placeholder="Contact number">
+                        {% if form.vendor_phone.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.vendor_phone.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="{{ form.vendor_email.id_for_label }}" class="form-label">
+                            Email Address
+                        </label>
+                        <input type="email" name="{{ form.vendor_email.name }}" id="vendorEmail" 
+                               value="{{ form.vendor_email.value|default:'' }}" 
+                               class="glass-input" placeholder="vendor@example.com">
+                        {% if form.vendor_email.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.vendor_email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receipt Upload -->
+            <div class="mb-6">
+                <label for="{{ form.receipt.id_for_label }}" class="form-label">
+                    Receipt/Invoice (Optional)
+                </label>
+                <div class="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-blue-500/50 transition-colors"
+                     onclick="document.getElementById('receiptFile').click()">
+                    
+                    <input type="file" name="{{ form.receipt.name }}" id="receiptFile" class="hidden" accept=".pdf,.jpg,.jpeg,.png">
+                    
+                    <div id="receiptUploadPrompt">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-white/40 mb-2"></i>
+                        <p class="text-white mb-1">Click to upload receipt</p>
+                        <p class="text-xs text-white/40">PDF, JPG, PNG (Max 5MB)</p>
+                    </div>
+                    
+                    <div id="receiptPreview" class="hidden">
+                        <div class="flex items-center justify-center space-x-2">
+                            <i class="fas fa-file-pdf text-red-400 text-2xl"></i>
+                            <span class="text-white" id="receiptFileName"></span>
+                            <button type="button" onclick="removeReceipt()" class="text-white/40 hover:text-white">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% if expense and expense.receipt %}
+                <div class="mt-2 text-sm">
+                    Current: <a href="{{ expense.receipt.url }}" target="_blank" class="text-blue-400 hover:underline">{{ expense.receipt.name|slice:"14:" }}</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                    Additional Notes
+                </label>
+                <textarea name="{{ form.notes.name }}" id="notes" rows="3" 
+                          class="glass-input" placeholder="Any additional information...">{{ form.notes.value|default:'' }}</textarea>
+                {% if form.notes.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Approval Section (for admins) -->
+            {% if user.is_admin and expense %}
+            <div class="mb-6 p-4 bg-yellow-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Approval</h4>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="approval_status" value="approved" class="form-radio h-4 w-4 text-green-600">
+                        <span class="ml-2 text-white/80">Approve</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="approval_status" value="rejected" class="form-radio h-4 w-4 text-red-600">
+                        <span class="ml-2 text-white/80">Reject</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="approval_status" value="pending" class="form-radio h-4 w-4 text-yellow-600" checked>
+                        <span class="ml-2 text-white/80">Pending</span>
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:expense_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-yellow-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if expense %}Update{% else %}Record{% endif %} Expense
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Expenses -->
+    {% if recent_expenses %}
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Recent Expenses in this Category</h3>
+        <div class="space-y-2">
+            {% for exp in recent_expenses %}
+            <div class="flex items-center justify-between p-2 bg-white/5 rounded">
+                <div>
+                    <p class="text-sm text-white">{{ exp.description|truncatechars:50 }}</p>
+                    <p class="text-xs text-white/40">{{ exp.expense_date|date:"d M Y" }}</p>
+                </div>
+                <span class="text-white font-bold">KSh {{ exp.amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Budget tracking
+    const categorySelect = document.getElementById('categorySelect');
+    const amountField = document.getElementById('amountField');
+    const budgetStatus = document.getElementById('budgetStatus');
+    const budgetAllocated = document.getElementById('budgetAllocated');
+    const budgetSpent = document.getElementById('budgetSpent');
+    const budgetRemaining = document.getElementById('budgetRemaining');
+    const budgetProgress = document.getElementById('budgetProgress');
+    const budgetWarning = document.getElementById('budgetWarning');
+
+    categorySelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value && selected.dataset.budget) {
+            // Fetch budget data via AJAX
+            fetch(`/finance/api/budget-status/?category=${selected.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    budgetAllocated.textContent = `KSh ${parseFloat(data.allocated).toLocaleString()}`;
+                    budgetSpent.textContent = `KSh ${parseFloat(data.spent).toLocaleString()}`;
+                    
+                    const remaining = data.allocated - data.spent;
+                    budgetRemaining.textContent = `KSh ${remaining.toLocaleString()}`;
+                    
+                    const percentage = (data.spent / data.allocated) * 100;
+                    budgetProgress.style.width = `${percentage}%`;
+                    
+                    budgetStatus.classList.remove('hidden');
+                    
+                    // Check if current expense would exceed budget
+                    const currentAmount = parseFloat(amountField.value) || 0;
+                    if (data.spent + currentAmount > data.allocated) {
+                        budgetWarning.classList.remove('hidden');
+                    } else {
+                        budgetWarning.classList.add('hidden');
+                    }
+                });
+        } else {
+            budgetStatus.classList.add('hidden');
+        }
+    });
+
+    amountField.addEventListener('input', function() {
+        if (categorySelect.value) {
+            // Trigger budget check
+            const event = new Event('change');
+            categorySelect.dispatchEvent(event);
+        }
+    });
+
+    // Receipt upload
+    function updateFileName(input) {
+        if (input.files.length > 0) {
+            document.getElementById('receiptFileName').textContent = input.files[0].name;
+            document.getElementById('receiptUploadPrompt').classList.add('hidden');
+            document.getElementById('receiptPreview').classList.remove('hidden');
+        }
+    }
+
+    document.getElementById('receiptFile').addEventListener('change', function() {
+        updateFileName(this);
+    });
+
+    function removeReceipt() {
+        document.getElementById('receiptFile').value = '';
+        document.getElementById('receiptUploadPrompt').classList.remove('hidden');
+        document.getElementById('receiptPreview').classList.add('hidden');
+    }
+
+    // Set default date to today
+    if (!document.getElementById('expenseDate').value) {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('expenseDate').value = today;
+    }
+</script>
+{% endblock %}

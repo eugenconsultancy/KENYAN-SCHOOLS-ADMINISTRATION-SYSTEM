@@ -23,14 +23,11 @@ def login_view(request):
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            # Get the cleaned data
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
             
-            # Authenticate the user
             user = authenticate(request, username=username, password=password)
             
-            # If authentication fails, try with email
             if user is None:
                 try:
                     user_obj = User.objects.get(email=username)
@@ -39,15 +36,12 @@ def login_view(request):
                     pass
             
             if user is not None:
-                # Check if user is active
                 if not user.is_active:
                     messages.error(request, 'This account is deactivated. Contact administrator.')
                     return render(request, 'accounts/login.html', {'form': form})
                 
-                # Log the user in
                 login(request, user)
                 
-                # Log the login
                 LoginLog.objects.create(
                     user=user,
                     ip_address=request.META.get('REMOTE_ADDR'),
@@ -55,7 +49,6 @@ def login_view(request):
                     success=True
                 )
                 
-                # Create audit log
                 AuditLog.objects.create(
                     user=user,
                     action='LOGIN',
@@ -65,16 +58,13 @@ def login_view(request):
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
                 
-                # Update last login IP
                 user.last_login_ip = request.META.get('REMOTE_ADDR')
                 user.save(update_fields=['last_login_ip'])
                 
-                # Check if password change is required
                 if user.force_password_change:
                     messages.warning(request, 'Please change your password before continuing.')
                     return redirect('accounts:change_password')
                 
-                # Redirect based on role
                 if user.role == 'admin':
                     return redirect('admin:index')
                 elif user.role == 'teacher':
@@ -99,7 +89,6 @@ def login_view(request):
 @login_required
 def logout_view(request):
     """Handle user logout"""
-    # Log the logout
     LoginLog.objects.create(
         user=request.user,
         ip_address=request.META.get('REMOTE_ADDR'),
@@ -107,7 +96,6 @@ def logout_view(request):
         success=True
     )
     
-    # Create audit log
     AuditLog.objects.create(
         user=request.user,
         action='LOGOUT',
@@ -134,7 +122,6 @@ def profile_edit(request):
         if form.is_valid():
             form.save()
             
-            # Create audit log
             AuditLog.objects.create(
                 user=request.user,
                 action='UPDATE',
@@ -164,10 +151,8 @@ def change_password(request):
                 user.force_password_change = False
                 user.save()
                 
-                # Update session to prevent logout
                 update_session_auth_hash(request, user)
                 
-                # Create audit log
                 AuditLog.objects.create(
                     user=user,
                     action='UPDATE',
@@ -193,7 +178,6 @@ def user_list(request):
     """List all users (admin only)"""
     users = User.objects.all().order_by('-date_joined')
     
-    # Search functionality
     search_query = request.GET.get('search', '')
     if search_query:
         users = users.filter(
@@ -203,15 +187,12 @@ def user_list(request):
             Q(last_name__icontains=search_query)
         )
     
-    # Filter by role
     role_filter = request.GET.get('role', '')
     if role_filter:
         users = users.filter(role=role_filter)
     
-    # Get user roles for filter dropdown
     user_roles = User.ROLE_CHOICES
     
-    # Pagination
     paginator = Paginator(users, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -232,7 +213,6 @@ def user_create(request):
         if form.is_valid():
             user = form.save()
             
-            # Create audit log
             AuditLog.objects.create(
                 user=request.user,
                 action='CREATE',
@@ -260,7 +240,6 @@ def user_edit(request, user_id):
         if form.is_valid():
             form.save()
             
-            # Create audit log
             AuditLog.objects.create(
                 user=request.user,
                 action='UPDATE',
@@ -287,7 +266,6 @@ def user_delete(request, user_id):
         username = user.username
         user.delete()
         
-        # Create audit log
         AuditLog.objects.create(
             user=request.user,
             action='DELETE',
@@ -305,11 +283,12 @@ def user_delete(request, user_id):
 @login_required
 def notifications(request):
     """View user notifications"""
-    notifications_list = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+    # Use the correct related_name
+    notifications_list = request.user.account_notifications.all().order_by('-created_at')
     
     # Mark all as read
     if request.GET.get('mark_read'):
-        notifications_list.update(is_read=True, read_at=timezone.now())
+        notifications_list.filter(is_read=False).update(is_read=True, read_at=timezone.now())
         messages.success(request, 'All notifications marked as read.')
         return redirect('accounts:notifications')
     
@@ -318,7 +297,13 @@ def notifications(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    return render(request, 'accounts/notifications.html', {'page_obj': page_obj})
+    # Get unread count
+    unread_count = notifications_list.filter(is_read=False).count()
+    
+    return render(request, 'accounts/notifications.html', {
+        'page_obj': page_obj,
+        'unread_count': unread_count
+    })
 
 @login_required
 def notification_detail(request, notification_id):
@@ -344,7 +329,6 @@ def activity_log(request):
     """View user activity log"""
     logs = AuditLog.objects.filter(user=request.user).order_by('-timestamp')
     
-    # Pagination
     paginator = Paginator(logs, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -357,17 +341,14 @@ def audit_logs(request):
     """View all audit logs (admin only)"""
     logs = AuditLog.objects.all().order_by('-timestamp')
     
-    # Filter by user
     user_filter = request.GET.get('user', '')
     if user_filter:
         logs = logs.filter(user_id=user_filter)
     
-    # Filter by action
     action_filter = request.GET.get('action', '')
     if action_filter:
         logs = logs.filter(action=action_filter)
     
-    # Pagination
     paginator = Paginator(logs, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)

@@ -116,45 +116,79 @@ def conversation_detail(request, conversation_id):
 def compose_message(request):
     """Compose a new message"""
     
+    # Get templates for the modal
+    from .models import MessageTemplate
+    templates = MessageTemplate.objects.all().order_by('-created_at')[:10]
+    
     if request.method == 'POST':
         form = ComposeMessageForm(request.POST, request.FILES)
         if form.is_valid():
-            # Get recipients
-            recipients = form.cleaned_data['recipients']
+            # Get cleaned data
             recipient_type = form.cleaned_data['recipient_type']
+            subject = form.cleaned_data.get('subject', '')
+            content = form.cleaned_data['content']
+            attachment = request.FILES.get('attachment')
             
-            if recipient_type:
-                if recipient_type == 'all_students':
-                    recipients = User.objects.filter(role='student', is_active=True)
-                elif recipient_type == 'all_teachers':
-                    recipients = User.objects.filter(role='teacher', is_active=True)
-                elif recipient_type == 'all_parents':
-                    recipients = User.objects.filter(role='parent', is_active=True)
-                elif recipient_type == 'class':
-                    class_level = form.cleaned_data['class_level']
-                    stream = form.cleaned_data['stream']
-                    from students.models import Student
-                    students = Student.objects.filter(
-                        current_class=class_level,
-                        stream=stream,
-                        is_active=True
-                    ).select_related('user')
-                    recipients = [s.user for s in students]
-                elif recipient_type == 'broadcast':
-                    broadcast_list = form.cleaned_data['broadcast_list']
+            # Determine recipients based on type
+            recipients = []
+            
+            if recipient_type == 'individual':
+                recipients = form.cleaned_data['recipients']
+                if not recipients:
+                    django_messages.error(request, 'No recipients selected.')
+                    return redirect('messaging:compose')
+            
+            elif recipient_type == 'all_students':
+                recipients = User.objects.filter(role='student', is_active=True)
+            
+            elif recipient_type == 'all_teachers':
+                recipients = User.objects.filter(role='teacher', is_active=True)
+            
+            elif recipient_type == 'all_parents':
+                recipients = User.objects.filter(role='parent', is_active=True)
+            
+            elif recipient_type == 'class':
+                class_level = form.cleaned_data['class_level']
+                stream = form.cleaned_data['stream']
+                
+                if not class_level or not stream:
+                    django_messages.error(request, 'Please select both class and stream.')
+                    return redirect('messaging:compose')
+                
+                from students.models import Student
+                students = Student.objects.filter(
+                    current_class=int(class_level),
+                    stream=stream,
+                    is_active=True
+                ).select_related('user')
+                recipients = [s.user for s in students if s.user]
+            
+            elif recipient_type == 'broadcast':
+                broadcast_list = form.cleaned_data['broadcast_list']
+                if broadcast_list:
                     recipients = broadcast_list.members.all()
+                else:
+                    django_messages.error(request, 'Please select a broadcast list.')
+                    return redirect('messaging:compose')
+            
+            # Convert queryset to list if needed
+            if hasattr(recipients, 'iterator'):  # Check if it's a queryset
+                recipients = list(recipients)
+            
+            # Filter out sender
+            recipients = [r for r in recipients if r.id != request.user.id]
             
             if not recipients:
-                django_messages.error(request, 'No recipients selected.')
+                django_messages.error(request, 'No valid recipients found.')
                 return redirect('messaging:compose')
             
-            # Create conversation and send messages
+            # Send messages
             success = MessagingService.send_bulk_message(
                 sender=request.user,
                 recipients=recipients,
-                subject=form.cleaned_data.get('subject', ''),
-                content=form.cleaned_data['content'],
-                attachment=form.cleaned_data.get('attachment')
+                subject=subject,
+                content=content,
+                attachment=attachment
             )
             
             if success:
@@ -174,7 +208,10 @@ def compose_message(request):
             except User.DoesNotExist:
                 pass
     
-    return render(request, 'messaging/compose.html', {'form': form})
+    return render(request, 'messaging/compose.html', {
+        'form': form,
+        'templates': templates
+    })
 
 # ============== Announcement Views ==============
 

@@ -10,7 +10,7 @@ urlpatterns = [
     path('export/', views.export_students, name='export'),
     path('bulk-upload/', views.student_bulk_upload, name='bulk_upload'),
     
-    # Student CRUD
+    # Student CRUD - NOTE: 'create/' MUST come before '<int:student_id>/'
     path('create/', views.student_create, name='create'),
     path('<int:student_id>/', views.student_detail, name='detail'),
     path('<int:student_id>/edit/', views.student_edit, name='edit'),

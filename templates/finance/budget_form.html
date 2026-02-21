@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if budget %}Edit{% else %}Create{% endif %} Budget - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if budget %}Edit Budget{% else %}Create New Budget{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="budgetForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Budget Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.academic_year.id_for_label }}" class="form-label">
+                            Academic Year <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.academic_year.name }}" id="academicYear" class="glass-input" required>
+                            <option value="">Select Academic Year</option>
+                            {% for year in form.academic_year.field.queryset %}
+                            <option value="{{ year.id }}" {% if form.academic_year.value == year.id %}selected{% endif %}>
+                                {{ year.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.academic_year.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.academic_year.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            Expense Category <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.category.name }}" id="category" class="glass-input" required>
+                            <option value="">Select Category</option>
+                            {% for category in form.category.field.queryset %}
+                            <option value="{{ category.id }}" 
+                                    data-budget="{{ category.budget_allocation }}"
+                                    {% if form.category.value == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Amount -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Budget Allocation</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.allocated_amount.id_for_label }}" class="form-label">
+                            Allocated Amount (KSh) <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.allocated_amount.name }}" id="allocatedAmount" 
+                                   value="{{ form.allocated_amount.value|default:'' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        {% if form.allocated_amount.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.allocated_amount.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-lg p-4">
+                        <p class="text-sm text-white/60 mb-1">Suggested Budget</p>
+                        <p class="text-xl font-bold text-blue-400" id="suggestedAmount">KSh 0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Summary (for editing) -->
+            {% if budget %}
+            <div class="mb-6 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Current Budget Status</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-white/60">Allocated</p>
+                        <p class="text-lg font-bold text-white">KSh {{ budget.allocated_amount|floatformat:2 }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-white/60">Spent</p>
+                        <p class="text-lg font-bold text-yellow-400">KSh {{ budget.spent_amount|floatformat:2 }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-white/60">Remaining</p>
+                        <p class="text-lg font-bold {% if budget.remaining_amount >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                            KSh {{ budget.remaining_amount|floatformat:2 }}
+                        </p>
+                    </div>
+                </div>
+                <div class="progress mt-3">
+                    {% widthratio budget.spent_amount budget.allocated_amount 100 as utilization %}
+                    <div class="progress-bar {% if utilization > 100 %}bg-red-500{% else %}bg-blue-500{% endif %}" 
+                         style="width: {{ utilization }}%"></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                    Notes (Optional)
+                </label>
+                <textarea name="{{ form.notes.name }}" id="notes" rows="4" 
+                          class="glass-input" 
+                          placeholder="Add any notes about this budget allocation...">{{ form.notes.value|default:'' }}</textarea>
+                {% if form.notes.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Historical Data -->
+            <div id="historicalData" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Previous Year Budgets</h4>
+                <div class="space-y-2" id="historyList">
+                    <!-- Will be populated via AJAX -->
+                </div>
+            </div>
+
+            <!-- Budget Tips -->
+            <div class="bg-green-500/10 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                    Budget Tips
+                </h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>Allocate realistic amounts based on previous years' spending</li>
+                    <li>Consider inflation and expected price increases</li>
+                    <li>Include contingency funds for unexpected expenses</li>
+                    <li>Review and adjust budgets quarterly based on actual spending</li>
+                </ul>
+            </div>
+
+            <!-- Quick Templates -->
+            <div class="mb-6">
+                <h4 class="text-white font-medium mb-3">Quick Budget Templates</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="loadTemplate('salaries')" class="glass-button text-sm py-2">
+                        Salaries
+                    </button>
+                    <button type="button" onclick="loadTemplate('operations')" class="glass-button text-sm py-2">
+                        Operations
+                    </button>
+                    <button type="button" onclick="loadTemplate('maintenance')" class="glass-button text-sm py-2">
+                        Maintenance
+                    </button>
+                    <button type="button" onclick="loadTemplate('development')" class="glass-button text-sm py-2">
+                        Development
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:budget_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if budget %}Update{% else %}Create{% endif %} Budget
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Category Information -->
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Expense Categories Guide</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Salaries & Wages</h4>
+                <p class="text-sm text-white/60">Teacher salaries, support staff wages, casual laborers, allowances, and benefits</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Operations</h4>
+                <p class="text-sm text-white/60">Electricity, water, internet, telephone, office supplies, and stationery</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Maintenance</h4>
+                <p class="text-sm text-white/60">Building repairs, equipment maintenance, vehicle maintenance, and cleaning</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Development</h4>
+                <p class="text-sm text-white/60">New construction, renovations, equipment purchase, and technology upgrades</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Academic</h4>
+                <p class="text-sm text-white/60">Teaching materials, laboratory supplies, library books, and exam expenses</p>
+            </div>
+            
+            <div class="bg-white/5 rounded-lg p-3">
+                <h4 class="text-white font-medium mb-2">Co-curricular</h4>
+                <p class="text-sm text-white/60">Sports equipment, club activities, competitions, and transportation</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load historical data when category is selected
+    const categorySelect = document.getElementById('category');
+    const academicYearSelect = document.getElementById('academicYear');
+    const historicalData = document.getElementById('historicalData');
+    const historyList = document.getElementById('historyList');
+    const suggestedAmount = document.getElementById('suggestedAmount');
+    const allocatedAmount = document.getElementById('allocatedAmount');
+
+    categorySelect.addEventListener('change', function() {
+        if (this.value && academicYearSelect.value) {
+            loadHistoricalData();
+        }
+    });
+
+    academicYearSelect.addEventListener('change', function() {
+        if (this.value && categorySelect.value) {
+            loadHistoricalData();
+        }
+    });
+
+    function loadHistoricalData() {
+        const categoryId = categorySelect.value;
+        const yearId = academicYearSelect.value;
+        
+        fetch(`/finance/api/budget-history/?category=${categoryId}&year=${yearId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.history && data.history.length > 0) {
+                    historyList.innerHTML = '';
+                    data.history.forEach(item => {
+                        historyList.innerHTML += `
+                            <div class="flex justify-between items-center p-2 bg-white/5 rounded">
+                                <span class="text-white">${item.year}</span>
+                                <span class="text-white font-bold">KSh ${item.amount}</span>
+                            </div>
+                        `;
+                    });
+                    historicalData.classList.remove('hidden');
+                    
+                    // Set suggested amount based on last year
+                    if (data.history.length > 0) {
+                        const lastAmount = data.history[0].amount;
+                        suggestedAmount.textContent = `KSh ${parseFloat(lastAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                        
+                        // Optionally pre-fill with last year's amount plus 10% inflation
+                        if (!allocatedAmount.value) {
+                            const suggested = lastAmount * 1.1;
+                            allocatedAmount.value = suggested.toFixed(2);
+                        }
+                    }
+                } else {
+                    historicalData.classList.add('hidden');
+                    suggestedAmount.textContent = 'KSh 0.00';
+                }
+            });
+    }
+
+    // Load templates
+    function loadTemplate(template) {
+        const templates = {
+            'salaries': {
+                'Salaries & Wages': 5000000,
+                'Operations': 1500000,
+                'Maintenance': 800000,
+                'Development': 2000000,
+                'Academic': 1000000,
+                'Co-curricular': 500000
+            },
+            'operations': {
+                'Salaries & Wages': 4500000,
+                'Operations': 2000000,
+                'Maintenance': 600000,
+                'Development': 1500000,
+                'Academic': 1200000,
+                'Co-curricular': 400000
+            },
+            'maintenance': {
+                'Salaries & Wages': 4000000,
+                'Operations': 1200000,
+                'Maintenance': 2000000,
+                'Development': 1800000,
+                'Academic': 800000,
+                'Co-curricular': 300000
+            },
+            'development': {
+                'Salaries & Wages': 4500000,
+                'Operations': 1000000,
+                'Maintenance': 500000,
+                'Development': 5000000,
+                'Academic': 1500000,
+                'Co-curricular': 600000
+            }
+        };
+
+        // Get current category name
+        const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text;
+        
+        if (categoryName && templates[template] && templates[template][categoryName]) {
+            allocatedAmount.value = templates[template][categoryName];
+        } else {
+            // If no specific template for this category, show a message
+            alert('No template available for this category. Please enter amount manually.');
+        }
+    }
+
+    // Validate amount
+    allocatedAmount.addEventListener('input', function() {
+        const value = parseFloat(this.value);
+        if (value < 0) {
+            this.value = 0;
+        }
+    });
+
+    // Auto-format numbers with commas (optional)
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+</script>
+
+<style>
+    /* Custom styles for number inputs */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+        opacity: 0.5;
+    }
+    
+    input[type=number]:hover::-webkit-inner-spin-button,
+    input[type=number]:hover::-webkit-outer-spin-button { 
+        opacity: 1;
+    }
+</style>
+{% endblock %}

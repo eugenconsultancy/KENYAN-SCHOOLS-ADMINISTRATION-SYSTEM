@@ -3,6 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
 from accounts.models import User
 import datetime
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Student(models.Model):
     """Student model for Kenyan Secondary Schools"""
@@ -322,3 +324,102 @@ class Sibling(models.Model):
     
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.sibling.get_full_name()}"
+
+
+# =============================================================================
+# SIGNALS FOR AUTO-PROFILE CREATION
+# =============================================================================
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Automatically create student profile when a user with student role is created"""
+    if created:
+        if instance.role == 'student':
+            # Generate a temporary admission number
+            temp_adm = f"TEMP{instance.id:06d}"
+            temp_kcpe = f"TEMP{instance.id:06d}"
+            
+            Student.objects.get_or_create(
+                user=instance,
+                defaults={
+                    'admission_number': temp_adm,
+                    'kcpe_index': temp_kcpe,
+                    'kcpe_marks': 0,
+                    'date_of_birth': datetime.date(2000, 1, 1),
+                    'gender': 'M',
+                    'current_class': 1,
+                    'stream': 'East',
+                    'admission_class': 1,
+                    'year_of_admission': datetime.datetime.now().year,
+                    'parent_name': 'Pending - Please Update',
+                    'parent_phone': '0000000000',
+                    'emergency_contact_name': 'Pending - Please Update',
+                    'emergency_contact_phone': '0000000000',
+                    'emergency_contact_relationship': 'Pending',
+                    'is_active': True
+                }
+            )
+        
+        elif instance.role == 'parent':
+            # Create parent profile if needed
+            Parent.objects.get_or_create(
+                user=instance,
+                defaults={
+                    'full_name': instance.get_full_name() or instance.username,
+                    'relationship': 'Guardian',
+                    'phone_number': instance.phone_number or '0000000000',
+                }
+            )
+    
+    else:
+        # For existing users, update related profiles if needed
+        if instance.role == 'student':
+            Student.objects.update_or_create(
+                user=instance,
+                defaults={
+                    'is_active': instance.is_active,
+                }
+            )
+
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Ensure profile is saved when user is saved"""
+    if instance.role == 'student':
+        try:
+            profile = instance.student_profile
+            # Update basic info if needed
+            profile.is_active = instance.is_active
+            profile.save()
+        except Student.DoesNotExist:
+            # Create profile if it doesn't exist (for existing users)
+            temp_adm = f"TEMP{instance.id:06d}"
+            temp_kcpe = f"TEMP{instance.id:06d}"
+            
+            Student.objects.create(
+                user=instance,
+                admission_number=temp_adm,
+                kcpe_index=temp_kcpe,
+                kcpe_marks=0,
+                date_of_birth=datetime.date(2000, 1, 1),
+                gender='M',
+                current_class=1,
+                stream='East',
+                admission_class=1,
+                year_of_admission=datetime.datetime.now().year,
+                parent_name='Pending - Please Update',
+                parent_phone='0000000000',
+                emergency_contact_name='Pending - Please Update',
+                emergency_contact_phone='0000000000',
+                emergency_contact_relationship='Pending',
+                is_active=instance.is_active
+            )
+    
+    elif instance.role == 'parent':
+        Parent.objects.update_or_create(
+            user=instance,
+            defaults={
+                'full_name': instance.get_full_name() or instance.username,
+                'phone_number': instance.phone_number or '0000000000',
+            }
+        )

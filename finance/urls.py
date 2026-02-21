@@ -53,6 +53,7 @@ urlpatterns = [
     # Exports
     path('export/payments/', views.export_payments, name='export_payments'),
     path('export/invoices/', views.export_invoices, name='export_invoices'),
+    path('budgets/export/', views.export_budgets, name='export_budgets'),
     
     # API endpoints
     path('api/student-balance/<int:student_id>/', views.get_student_balance, name='api_student_balance'),

@@ -758,6 +758,55 @@ def export_invoices(request):
     
     return response
 
+
+@login_required
+@admin_required
+def export_budgets(request):
+    """Export budgets to CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    # Get filters
+    year = request.GET.get('year')
+    status = request.GET.get('status')
+    
+    budgets = Budget.objects.all().select_related('academic_year', 'category')
+    
+    if year:
+        budgets = budgets.filter(academic_year__name=year)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="budgets.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Academic Year', 'Category', 'Allocated Amount', 'Spent Amount',
+        'Remaining Amount', 'Utilization %', 'Status'
+    ])
+    
+    for budget in budgets:
+        utilization = (budget.spent_amount / budget.allocated_amount * 100) if budget.allocated_amount > 0 else 0
+        
+        if utilization > 100:
+            status_text = 'Over Budget'
+        elif utilization > 80:
+            status_text = 'Warning'
+        else:
+            status_text = 'On Track'
+        
+        writer.writerow([
+            budget.academic_year.name,
+            budget.category.name,
+            budget.allocated_amount,
+            budget.spent_amount,
+            budget.remaining_amount,
+            f"{utilization:.1f}%",
+            status_text
+        ])
+    
+    return response
+
 # ============== API Views ==============
 
 @login_required

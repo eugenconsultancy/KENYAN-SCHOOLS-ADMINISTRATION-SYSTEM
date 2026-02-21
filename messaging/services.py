@@ -1,22 +1,22 @@
 """
 Services module for Messaging app
-Handles business logic for messaging operations
+Handles business logic for messaging operations with real-time WebSocket support
 """
 
-from django.db.models import Count, Avg, Sum, Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from .models import (
     Conversation, Message, Notification, Announcement,
     EmailLog, SMSLog
 )
 from accounts.models import User
-import requests
 import json
-from django.conf import settings
 
 class MessagingService:
-    """Service for messaging operations"""
+    """Service for messaging operations with real-time updates"""
     
     @staticmethod
     def get_or_create_conversation(participants):
@@ -48,7 +48,7 @@ class MessagingService:
     
     @staticmethod
     def send_message(sender, recipients, content, subject='', attachment=None):
-        """Send a message to one or more recipients"""
+        """Send a message to one or more recipients with real-time notification"""
         
         if not isinstance(recipients, list):
             recipients = [recipients]
@@ -70,16 +70,80 @@ class MessagingService:
             attachment=attachment
         )
         
-        # Create notifications for recipients
+        channel_layer = get_channel_layer()
+        
+        # Create notifications and broadcast real-time updates
         for recipient in recipients:
             if recipient != sender:
-                Notification.objects.create(
+                # Create database notification
+                notification = Notification.objects.create(
                     recipient=recipient,
                     notification_type='message',
                     title=f"New message from {sender.get_full_name()}",
                     message=content[:100] + ('...' if len(content) > 100 else ''),
                     link=f"/messaging/conversation/{conversation.id}/"
                 )
+                
+                # Send real-time notification via WebSocket
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{recipient.id}_notifications',
+                    {
+                        'type': 'notification_message',
+                        'notification': {
+                            'id': notification.id,
+                            'title': notification.title,
+                            'message': notification.message,
+                            'link': notification.link,
+                            'created_at': notification.created_at.isoformat()
+                        }
+                    }
+                )
+                
+                # Send new message notification to recipient's conversation group
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{recipient.id}_conversations',
+                    {
+                        'type': 'conversation_message',
+                        'message': {
+                            'id': message.id,
+                            'content': message.content[:50],
+                            'sender': sender.get_full_name(),
+                            'sender_id': sender.id,
+                            'conversation_id': conversation.id,
+                            'timestamp': message.created_at.isoformat(),
+                            'is_read': False
+                        },
+                        'conversation_id': conversation.id,
+                        'sender': sender.get_full_name(),
+                        'timestamp': message.created_at.isoformat()
+                    }
+                )
+        
+        # Broadcast to conversation group for real-time chat
+        async_to_sync(channel_layer.group_send)(
+            f'conversation_{conversation.id}',
+            {
+                'type': 'chat_message',
+                'message': {
+                    'id': message.id,
+                    'content': message.content,
+                    'sender': sender.get_full_name(),
+                    'sender_id': sender.id,
+                    'timestamp': message.created_at.isoformat(),
+                    'attachment': message.attachment.url if message.attachment else None
+                }
+            }
+        )
+        
+        # Update conversation list for all participants
+        for participant in all_participants:
+            async_to_sync(channel_layer.group_send)(
+                f'user_{participant.id}_conversations',
+                {
+                    'type': 'conversation_updated',
+                    'conversation_id': conversation.id
+                }
+            )
         
         return message
     
@@ -91,6 +155,7 @@ class MessagingService:
         
         for recipient in recipients:
             if recipient != sender:
+                # Create individual conversation for each recipient
                 message = MessagingService.send_message(
                     sender=sender,
                     recipients=[recipient],
@@ -103,6 +168,34 @@ class MessagingService:
         return sent_count
     
     @staticmethod
+    def mark_as_read(conversation_id, user):
+        """Mark all messages in a conversation as read"""
+        
+        messages = Message.objects.filter(
+            conversation_id=conversation_id
+        ).exclude(
+            sender=user
+        ).exclude(
+            read_by=user
+        )
+        
+        for message in messages:
+            message.mark_as_read(user)
+        
+        # Broadcast read receipts
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'conversation_{conversation_id}',
+            {
+                'type': 'read_receipt',
+                'user_id': user.id,
+                'user_name': user.get_full_name()
+            }
+        )
+        
+        return messages.count()
+    
+    @staticmethod
     def search_messages(user, query):
         """Search messages in user's conversations"""
         
@@ -112,13 +205,13 @@ class MessagingService:
         ).distinct().order_by('-created_at')
 
 class NotificationService:
-    """Service for creating notifications"""
+    """Service for creating notifications with real-time updates"""
     
     @staticmethod
     def create_notification(recipient, notification_type, title, message, link='', group_key=''):
-        """Create a single notification"""
+        """Create a single notification with real-time push"""
         
-        return Notification.objects.create(
+        notification = Notification.objects.create(
             recipient=recipient,
             notification_type=notification_type,
             title=title,
@@ -126,27 +219,114 @@ class NotificationService:
             link=link,
             group_key=group_key
         )
+        
+        # Send real-time notification via WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'user_{recipient.id}_notifications',
+            {
+                'type': 'notification_message',
+                'notification': {
+                    'id': notification.id,
+                    'title': notification.title,
+                    'message': notification.message,
+                    'link': notification.link,
+                    'type': notification_type,
+                    'created_at': notification.created_at.isoformat()
+                }
+            }
+        )
+        
+        return notification
     
     @staticmethod
     def create_bulk_notifications(recipients, notification_type, title, message, link='', group_key=''):
-        """Create notifications for multiple recipients"""
+        """Create notifications for multiple recipients with real-time pushes"""
         
         notifications = []
+        channel_layer = get_channel_layer()
+        
         for recipient in recipients:
-            notifications.append(Notification(
+            notification = Notification(
                 recipient=recipient,
                 notification_type=notification_type,
                 title=title,
                 message=message,
                 link=link,
                 group_key=group_key
-            ))
+            )
+            notifications.append(notification)
         
-        return Notification.objects.bulk_create(notifications)
+        # Bulk create
+        created_notifications = Notification.objects.bulk_create(notifications)
+        
+        # Send real-time notifications
+        for notification in created_notifications:
+            async_to_sync(channel_layer.group_send)(
+                f'user_{notification.recipient.id}_notifications',
+                {
+                    'type': 'notification_message',
+                    'notification': {
+                        'id': notification.id,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'link': notification.link,
+                        'type': notification_type,
+                        'created_at': notification.created_at.isoformat()
+                    }
+                }
+            )
+        
+        return created_notifications
+    
+    @staticmethod
+    def mark_as_read(notification_id, user):
+        """Mark a notification as read and broadcast update"""
+        
+        try:
+            notification = Notification.objects.get(id=notification_id, recipient=user)
+            notification.mark_as_read()
+            
+            # Broadcast unread count update
+            channel_layer = get_channel_layer()
+            unread_count = Notification.objects.filter(recipient=user, is_read=False).count()
+            
+            async_to_sync(channel_layer.group_send)(
+                f'user_{user.id}_notifications',
+                {
+                    'type': 'unread_count',
+                    'count': unread_count
+                }
+            )
+            
+            return True
+        except Notification.DoesNotExist:
+            return False
+    
+    @staticmethod
+    def mark_all_as_read(user):
+        """Mark all notifications as read for a user"""
+        
+        updated = Notification.objects.filter(recipient=user, is_read=False).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        
+        # Broadcast update
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'user_{user.id}_notifications',
+            {
+                'type': 'unread_count',
+                'count': 0
+            }
+        )
+        
+        return updated
     
     @staticmethod
     def notify_announcement(announcement):
-        """Create notifications for a new announcement"""
+        """Create notifications for a new announcement with real-time push"""
         
         # Determine recipients based on audience
         if announcement.audience_type == 'all':
@@ -175,16 +355,39 @@ class NotificationService:
         
         # Create notifications
         notifications = []
+        channel_layer = get_channel_layer()
+        
         for recipient in recipients:
-            notifications.append(Notification(
+            notification = Notification(
                 recipient=recipient,
                 notification_type='announcement',
                 title=announcement.title,
                 message=announcement.content[:100] + ('...' if len(announcement.content) > 100 else ''),
                 link=f"/messaging/announcements/{announcement.id}/"
-            ))
+            )
+            notifications.append(notification)
         
-        return Notification.objects.bulk_create(notifications)
+        # Bulk create
+        created_notifications = Notification.objects.bulk_create(notifications)
+        
+        # Send real-time notifications
+        for notification in created_notifications:
+            async_to_sync(channel_layer.group_send)(
+                f'user_{notification.recipient.id}_notifications',
+                {
+                    'type': 'notification_message',
+                    'notification': {
+                        'id': notification.id,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'link': notification.link,
+                        'type': 'announcement',
+                        'created_at': notification.created_at.isoformat()
+                    }
+                }
+            )
+        
+        return len(created_notifications)
     
     @staticmethod
     def clear_old_notifications(days=30):
@@ -341,3 +544,75 @@ class AnnouncementService:
         """Mark announcement as read by user"""
         
         announcement.read_by.add(user)
+        
+        # Optional: Broadcast read status
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'user_{user.id}_notifications',
+            {
+                'type': 'announcement_read',
+                'announcement_id': announcement.id
+            }
+        )
+
+class TypingService:
+    """Service for handling typing indicators"""
+    
+    @staticmethod
+    def send_typing_indicator(conversation_id, user, is_typing):
+        """Send typing indicator to conversation participants"""
+        
+        channel_layer = get_channel_layer()
+        
+        async_to_sync(channel_layer.group_send)(
+            f'conversation_{conversation_id}',
+            {
+                'type': 'typing_indicator',
+                'user_id': user.id,
+                'user_name': user.get_full_name(),
+                'is_typing': is_typing
+            }
+        )
+
+class PresenceService:
+    """Service for handling user presence (online/offline)"""
+    
+    @staticmethod
+    def user_online(user):
+        """Mark user as online and broadcast to relevant conversations"""
+        
+        # Get all conversations where user is a participant
+        conversations = Conversation.objects.filter(participants=user)
+        
+        channel_layer = get_channel_layer()
+        
+        for conversation in conversations:
+            async_to_sync(channel_layer.group_send)(
+                f'conversation_{conversation.id}',
+                {
+                    'type': 'user_presence',
+                    'user_id': user.id,
+                    'user_name': user.get_full_name(),
+                    'status': 'online'
+                }
+            )
+    
+    @staticmethod
+    def user_offline(user):
+        """Mark user as offline and broadcast to relevant conversations"""
+        
+        # Get all conversations where user is a participant
+        conversations = Conversation.objects.filter(participants=user)
+        
+        channel_layer = get_channel_layer()
+        
+        for conversation in conversations:
+            async_to_sync(channel_layer.group_send)(
+                f'conversation_{conversation.id}',
+                {
+                    'type': 'user_presence',
+                    'user_id': user.id,
+                    'user_name': user.get_full_name(),
+                    'status': 'offline'
+                }
+            )

@@ -1,0 +1,444 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if attendance %}Edit{% else %}Mark{% endif %} Teacher Attendance - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if attendance %}Edit Teacher Attendance{% else %}Mark Teacher Attendance{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="attendanceForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Teacher Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Teacher Information</h3>
+                
+                <div>
+                    <label for="{{ form.teacher.id_for_label }}" class="form-label">
+                        Teacher <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.teacher.name }}" id="teacherSelect" class="glass-input select2" required>
+                        <option value="">Select Teacher</option>
+                        {% for teacher in form.teacher.field.queryset %}
+                        <option value="{{ teacher.id }}" 
+                                data-emp="{{ teacher.employee_number }}"
+                                data-dept="{{ teacher.specialization }}"
+                                {% if form.teacher.value == teacher.id %}selected{% endif %}>
+                            {{ teacher.get_full_name }} ({{ teacher.employee_number }}) - {{ teacher.specialization }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.teacher.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.teacher.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Teacher Details Card -->
+                <div id="teacherDetails" class="hidden mt-4 p-4 bg-blue-500/10 rounded-lg">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-white/60">Employee No:</span>
+                            <span class="text-white ml-2" id="teacherEmp">-</span>
+                        </div>
+                        <div>
+                            <span class="text-white/60">Department:</span>
+                            <span class="text-white ml-2" id="teacherDept">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date and Status -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Attendance Details</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.date.id_for_label }}" class="form-label">
+                            Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.date.name }}" id="dateField" 
+                               value="{{ form.date.value|date:'Y-m-d'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                            Status <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.status.name }}" id="statusSelect" class="glass-input" required>
+                            <option value="">Select Status</option>
+                            {% for value, label in form.status.field.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        {% if form.status.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Fields (shown based on status) -->
+            <div id="timeFields" class="mb-6 hidden">
+                <h3 class="text-lg font-semibold text-white mb-4">Time Tracking</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.check_in_time.id_for_label }}" class="form-label">
+                            Check In Time
+                        </label>
+                        <input type="time" name="{{ form.check_in_time.name }}" id="checkInTime" 
+                               value="{{ form.check_in_time.value|time:'H:i'|default:'' }}" 
+                               class="glass-input">
+                        {% if form.check_in_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.check_in_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.check_out_time.id_for_label }}" class="form-label">
+                            Check Out Time
+                        </label>
+                        <input type="time" name="{{ form.check_out_time.name }}" id="checkOutTime" 
+                               value="{{ form.check_out_time.value|time:'H:i'|default:'' }}" 
+                               class="glass-input">
+                        {% if form.check_out_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.check_out_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Late Minutes (auto-calculated) -->
+                <div id="lateMinutes" class="hidden mt-3 p-3 bg-yellow-500/10 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-yellow-400">
+                            <i class="fas fa-clock mr-2"></i>
+                            Late by:
+                        </span>
+                        <span class="text-yellow-400 font-bold" id="lateMinutesValue">0 minutes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reason Field (shown for absence/leave) -->
+            <div id="reasonField" class="mb-6 hidden">
+                <label for="{{ form.reason.id_for_label }}" class="form-label">
+                    Reason <span class="text-red-400">*</span>
+                </label>
+                <textarea name="{{ form.reason.name }}" id="reasonField" rows="3" 
+                          class="glass-input" 
+                          placeholder="Please provide reason for absence/leave">{{ form.reason.value|default:'' }}</textarea>
+                {% if form.reason.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.reason.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Quick Status Buttons -->
+            <div class="mb-6">
+                <h4 class="text-white font-medium mb-3">Quick Actions</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="setStatus('present')" class="glass-button text-sm py-2 bg-green-600/50">
+                        <i class="fas fa-check-circle mr-1"></i>Present
+                    </button>
+                    <button type="button" onclick="setStatus('late')" class="glass-button text-sm py-2 bg-yellow-600/50">
+                        <i class="fas fa-clock mr-1"></i>Late
+                    </button>
+                    <button type="button" onclick="setStatus('absent')" class="glass-button text-sm py-2 bg-red-600/50">
+                        <i class="fas fa-times-circle mr-1"></i>Absent
+                    </button>
+                    <button type="button" onclick="setStatus('leave')" class="glass-button text-sm py-2 bg-blue-600/50">
+                        <i class="fas fa-umbrella-beach mr-1"></i>Leave
+                    </button>
+                </div>
+            </div>
+
+            <!-- Today's Summary (if marking for today) -->
+            <div id="todaySummary" class="hidden mb-6 p-4 bg-white/5 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Today's Summary</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-white/60">Present Today:</span>
+                        <span class="text-green-400 ml-2" id="presentCount">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Absent Today:</span>
+                        <span class="text-red-400 ml-2" id="absentCount">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">On Leave:</span>
+                        <span class="text-blue-400 ml-2" id="leaveCount">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Late:</span>
+                        <span class="text-yellow-400 ml-2" id="lateCount">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Remarks -->
+            <div class="mb-6">
+                <label for="{{ form.remarks.id_for_label }}" class="form-label">
+                    Remarks (Optional)
+                </label>
+                <input type="text" name="{{ form.remarks.name }}" id="remarks" 
+                       value="{{ form.remarks.value|default:'' }}" 
+                       class="glass-input" 
+                       placeholder="Any additional notes">
+                {% if form.remarks.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.remarks.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'attendance:teacher_attendance_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if attendance %}Update{% else %}Save{% endif %} Attendance
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Teacher's Recent Attendance -->
+    <div id="recentAttendance" class="glass-card mt-6 p-6 hidden">
+        <h3 class="text-lg font-semibold text-white mb-4">Recent Attendance for Selected Teacher</h3>
+        <div class="space-y-2" id="recentList">
+            <!-- Will be populated via AJAX -->
+        </div>
+    </div>
+</div>
+
+<!-- Include Select2 CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Search teacher...",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Teacher selection handling
+    const teacherSelect = document.getElementById('teacherSelect');
+    const teacherDetails = document.getElementById('teacherDetails');
+    const recentAttendance = document.getElementById('recentAttendance');
+    const recentList = document.getElementById('recentList');
+
+    teacherSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value) {
+            document.getElementById('teacherEmp').textContent = selected.dataset.emp || '-';
+            document.getElementById('teacherDept').textContent = selected.dataset.dept || '-';
+            teacherDetails.classList.remove('hidden');
+            
+            // Fetch recent attendance
+            fetchTeacherAttendance(selected.value);
+        } else {
+            teacherDetails.classList.add('hidden');
+            recentAttendance.classList.add('hidden');
+        }
+    });
+
+    function fetchTeacherAttendance(teacherId) {
+        fetch(`/attendance/api/teacher-recent/${teacherId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    recentList.innerHTML = '';
+                    data.forEach(record => {
+                        const statusClass = {
+                            'present': 'badge-success',
+                            'late': 'badge-warning',
+                            'absent': 'badge-error',
+                            'leave': 'badge-info'
+                        }[record.status] || 'badge-info';
+                        
+                        recentList.innerHTML += `
+                            <div class="flex items-center justify-between p-2 bg-white/5 rounded">
+                                <span class="text-white">${record.date}</span>
+                                <span class="badge ${statusClass}">${record.status_display}</span>
+                            </div>
+                        `;
+                    });
+                    recentAttendance.classList.remove('hidden');
+                }
+            });
+    }
+
+    // Status-dependent fields
+    const statusSelect = document.getElementById('statusSelect');
+    const timeFields = document.getElementById('timeFields');
+    const reasonField = document.getElementById('reasonField');
+    const lateMinutes = document.getElementById('lateMinutes');
+    const checkInTime = document.getElementById('checkInTime');
+    const checkOutTime = document.getElementById('checkOutTime');
+
+    function updateFields() {
+        const status = statusSelect.value;
+        
+        // Time fields for present/late
+        if (status === 'present' || status === 'late') {
+            timeFields.classList.remove('hidden');
+        } else {
+            timeFields.classList.add('hidden');
+        }
+        
+        // Reason field for absent/leave
+        if (status === 'absent' || status === 'leave') {
+            reasonField.classList.remove('hidden');
+            document.querySelector('#reasonField textarea').required = true;
+        } else {
+            reasonField.classList.add('hidden');
+            document.querySelector('#reasonField textarea').required = false;
+        }
+        
+        // Late minutes calculation
+        if (status === 'late') {
+            lateMinutes.classList.remove('hidden');
+            calculateLateMinutes();
+        } else {
+            lateMinutes.classList.add('hidden');
+        }
+    }
+
+    function calculateLateMinutes() {
+        if (checkInTime.value) {
+            const [hours, minutes] = checkInTime.value.split(':').map(Number);
+            const checkIn = hours * 60 + minutes;
+            const schoolStart = 8 * 60; // 8:00 AM
+            
+            if (checkIn > schoolStart) {
+                const late = checkIn - schoolStart;
+                document.getElementById('lateMinutesValue').textContent = `${late} minutes`;
+            } else {
+                document.getElementById('lateMinutesValue').textContent = 'On time';
+            }
+        }
+    }
+
+    statusSelect.addEventListener('change', updateFields);
+    checkInTime.addEventListener('input', calculateLateMinutes);
+
+    // Quick status buttons
+    function setStatus(status) {
+        statusSelect.value = status;
+        updateFields();
+        
+        // Auto-fill time for present/late
+        if (status === 'present' || status === 'late') {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            checkInTime.value = `${hours}:${minutes}`;
+            
+            if (status === 'present') {
+                // Auto-calculate check-out (end of day)
+                checkOutTime.value = '16:00';
+            }
+        }
+    }
+
+    // Date validation
+    const dateField = document.getElementById('dateField');
+    
+    dateField.addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        if (selectedDate > today) {
+            alert('Cannot mark attendance for future dates');
+            this.value = '';
+        } else {
+            // Check if attendance already marked for this date
+            if (teacherSelect.value) {
+                checkExistingAttendance(teacherSelect.value, this.value);
+            }
+            
+            // Show today's summary if date is today
+            if (selectedDate.getTime() === today.getTime()) {
+                fetchTodaySummary();
+            } else {
+                document.getElementById('todaySummary').classList.add('hidden');
+            }
+        }
+    });
+
+    function checkExistingAttendance(teacherId, date) {
+        fetch(`/attendance/api/check-existing/${teacherId}/${date}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    if (confirm('Attendance already marked for this date. Do you want to edit it?')) {
+                        window.location.href = `/attendance/teacher/edit/${data.id}/`;
+                    }
+                }
+            });
+    }
+
+    function fetchTodaySummary() {
+        fetch('/attendance/api/today-summary/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('presentCount').textContent = data.present;
+                document.getElementById('absentCount').textContent = data.absent;
+                document.getElementById('leaveCount').textContent = data.leave;
+                document.getElementById('lateCount').textContent = data.late;
+                document.getElementById('todaySummary').classList.remove('hidden');
+            });
+    }
+
+    // Set default date to today
+    if (!dateField.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateField.value = today;
+        fetchTodaySummary();
+    }
+
+    // Initialize
+    updateFields();
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+    
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+        color: white;
+        line-height: 45px;
+    }
+    
+    .select2-container--classic .select2-results__option {
+        background-color: #1e293b;
+        color: white;
+    }
+</style>
+{% endblock %}
