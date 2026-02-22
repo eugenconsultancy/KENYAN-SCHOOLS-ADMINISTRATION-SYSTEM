@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Upload Results - {{ exam.name }}{% endblock %}
+
+{% block page_title %}Bulk Upload Results: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Exam Info Card -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white">{{ exam.name }}</h2>
+                <p class="text-white/60">{{ exam.term }} | {{ exam.get_exam_type_display }}</p>
+                <p class="text-sm text-white/80 mt-2">{{ exam.start_date|date:"d M Y" }} - {{ exam.end_date|date:"d M Y" }}</p>
+            </div>
+            <a href="{% url 'academics:exam_detail' exam.id %}" class="glass-button">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Exam
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Upload Form -->
+        <div class="lg:col-span-2">
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Upload Results CSV</h3>
+                
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert-error p-4 rounded-lg mb-6">
+                        {% for error in form.non_field_errors %}
+                        <p class="text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-6">
+                        <label for="{{ form.csv_file.id_for_label }}" class="form-label">
+                            CSV File <span class="text-red-400">*</span>
+                        </label>
+                        <div class="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-blue-500/50 transition-colors cursor-pointer"
+                             onclick="document.getElementById('fileInput').click()">
+                            
+                            <input type="file" name="{{ form.csv_file.name }}" id="fileInput" class="hidden" accept=".csv" required>
+                            
+                            <div id="uploadPrompt">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-white/40 mb-3"></i>
+                                <p class="text-white mb-2">Click to upload CSV file or drag and drop</p>
+                                <p class="text-sm text-white/40">Supported format: CSV (Max 10MB)</p>
+                            </div>
+                            
+                            <div id="filePreview" class="hidden">
+                                <div class="flex items-center justify-center space-x-3">
+                                    <i class="fas fa-file-csv text-green-400 text-3xl"></i>
+                                    <div class="text-left">
+                                        <p class="text-white font-medium" id="fileName"></p>
+                                        <p class="text-sm text-white/40" id="fileSize"></p>
+                                    </div>
+                                    <button type="button" onclick="resetFileInput()" class="text-white/40 hover:text-white">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% if form.csv_file.errors %}
+                        <p class="text-sm text-red-400 mt-2">{{ form.csv_file.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.csv_file.help_text %}
+                        <p class="text-xs text-white/60 mt-2">{{ form.csv_file.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Upload Options -->
+                    <div class="bg-white/5 rounded-lg p-4 mb-6">
+                        <h4 class="text-white font-medium mb-3">Upload Options</h4>
+                        
+                        <div class="space-y-3">
+                            <label class="flex items-center">
+                                <input type="radio" name="upload_option" value="update" class="form-radio h-4 w-4 text-blue-600" checked>
+                                <span class="ml-2 text-white/80">Update existing results (overwrite if exists)</span>
+                            </label>
+                            
+                            <label class="flex items-center">
+                                <input type="radio" name="upload_option" value="skip" class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2 text-white/80">Skip existing results (only add new)</span>
+                            </label>
+                            
+                            <label class="flex items-center">
+                                <input type="radio" name="upload_option" value="validate" class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2 text-white/80">Validate only (don't save)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Validation Summary (hidden by default) -->
+                    <div id="validationSummary" class="hidden mb-6 p-4 bg-blue-500/10 rounded-lg">
+                        <h4 class="text-white font-medium mb-3">Validation Summary</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-sm text-white/60">Total Records</span>
+                                <p class="text-2xl font-bold text-white" id="totalRecords">0</p>
+                            </div>
+                            <div>
+                                <span class="text-sm text-white/60">Valid Records</span>
+                                <p class="text-2xl font-bold text-green-400" id="validRecords">0</p>
+                            </div>
+                            <div>
+                                <span class="text-sm text-white/60">Errors</span>
+                                <p class="text-2xl font-bold text-red-400" id="errorCount">0</p>
+                            </div>
+                            <div>
+                                <span class="text-sm text-white/60">Warnings</span>
+                                <p class="text-2xl font-bold text-yellow-400" id="warningCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar (hidden by default) -->
+                    <div id="progressSection" class="hidden mb-6">
+                        <div class="flex justify-between text-sm text-white/60 mb-2">
+                            <span>Uploading...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress h-3">
+                            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <p id="progressMessage" class="text-xs text-white/40 mt-2">Preparing upload...</p>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div id="errorDisplay" class="hidden mb-6">
+                        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                            <h4 class="text-white font-medium mb-2 flex items-center">
+                                <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                                Validation Errors
+                            </h4>
+                            <div id="errorList" class="max-h-60 overflow-y-auto space-y-2">
+                                <!-- Errors will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex justify-end space-x-3">
+                        <a href="{% url 'academics:exam_detail' exam.id %}" class="glass-button">
+                            Cancel
+                        </a>
+                        <button type="submit" class="glass-button bg-green-600/50" id="uploadBtn">
+                            <i class="fas fa-upload mr-2"></i>Upload and Validate
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Instructions Panel -->
+        <div class="lg:col-span-1">
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">CSV Format Instructions</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-white font-medium mb-2">Required Columns:</h4>
+                        <div class="bg-white/5 rounded p-3 space-y-1">
+                            <p class="text-sm text-white/80"><span class="text-blue-400">admission_number</span> - Student's admission number</p>
+                            <p class="text-sm text-white/80"><span class="text-blue-400">subject_code</span> - Subject code (e.g., MAT, ENG)</p>
+                            <p class="text-sm text-white/80"><span class="text-blue-400">marks</span> - Marks obtained (0-100)</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-white font-medium mb-2">Optional Columns:</h4>
+                        <div class="bg-white/5 rounded p-3 space-y-1">
+                            <p class="text-sm text-white/80"><span class="text-blue-400">remarks</span> - Optional remarks</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-500/10 rounded-lg p-3">
+                        <h4 class="text-white font-medium mb-2 text-sm">Important Notes:</h4>
+                        <ul class="text-xs text-white/80 space-y-1 list-disc list-inside">
+                            <li>CSV file must use comma as delimiter</li>
+                            <li>First row must contain column headers</li>
+                            <li>Marks must be between 0 and {{ exam.subjects.first.max_mark|default:100 }}</li>
+                            <li>Student and subject must exist in the system</li>
+                            <li>Each student-subject combination must be unique</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sample CSV -->
+                    <div class="mt-4">
+                        <h4 class="text-white font-medium mb-2">Sample Format:</h4>
+                        <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+                            <pre class="text-xs text-green-400 font-mono">
+admission_number,subject_code,marks,remarks
+ADM/2024/1001,MAT,78,Good work
+ADM/2024/1001,ENG,82,Excellent
+ADM/2024/1002,MAT,65,Satisfactory
+ADM/2024/1002,ENG,71,Good
+                            </pre>
+                        </div>
+                    </div>
+
+                    <!-- Download Template -->
+                    <div class="mt-6">
+                        <a href="{% url 'academics:download_result_template' exam.id %}" class="glass-button w-full text-center">
+                            <i class="fas fa-download mr-2"></i>Download CSV Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subjects List -->
+            <div class="glass-card mt-6 p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Subjects in this Exam</h3>
+                <div class="space-y-2">
+                    {% for subject in exam.subjects.all %}
+                    <div class="flex items-center justify-between p-2 bg-white/5 rounded">
+                        <div>
+                            <p class="text-white font-medium">{{ subject.name }}</p>
+                            <p class="text-xs text-white/40">Code: {{ subject.code }}</p>
+                        </div>
+                        <span class="text-sm text-white/60">Max: {{ subject.max_mark }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // File input handling
+    const fileInput = document.getElementById('fileInput');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size exceeds 10MB limit');
+                this.value = '';
+                return;
+            }
+            
+            // Validate file extension
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please upload a CSV file');
+                this.value = '';
+                return;
+            }
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            uploadPrompt.classList.add('hidden');
+            filePreview.classList.remove('hidden');
+        }
+    });
+
+    function resetFileInput() {
+        fileInput.value = '';
+        uploadPrompt.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission with progress
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files.length) {
+            alert('Please select a file to upload');
+            return;
+        }
+        
+        // Show progress section
+        document.getElementById('progressSection').classList.remove('hidden');
+        document.getElementById('uploadBtn').disabled = true;
+        
+        const formData = new FormData(this);
+        
+        // Simulate progress (in production, this would use XMLHttpRequest upload progress)
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 5;
+            if (progress <= 100) {
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('progressPercent').textContent = progress + '%';
+                
+                if (progress === 30) {
+                    document.getElementById('progressMessage').textContent = 'Validating data...';
+                } else if (progress === 60) {
+                    document.getElementById('progressMessage').textContent = 'Processing records...';
+                } else if (progress === 90) {
+                    document.getElementById('progressMessage').textContent = 'Finalizing...';
+                }
+            }
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                document.getElementById('progressMessage').textContent = 'Upload complete! Processing results...';
+                
+                // Submit the form
+                setTimeout(() => {
+                    // In production, this would be a real AJAX submission
+                    // For now, we'll just show a success message
+                    showValidationResults();
+                }, 500);
+            }
+        }, 200);
+    });
+
+    // Mock function to show validation results (replace with actual AJAX response handling)
+    function showValidationResults() {
+        // Hide progress
+        document.getElementById('progressSection').classList.add('hidden');
+        
+        // Show validation summary (mock data)
+        document.getElementById('validationSummary').classList.remove('hidden');
+        document.getElementById('totalRecords').textContent = '25';
+        document.getElementById('validRecords').textContent = '23';
+        document.getElementById('errorCount').textContent = '2';
+        document.getElementById('warningCount').textContent = '0';
+        
+        // Show error display with mock errors
+        document.getElementById('errorDisplay').classList.remove('hidden');
+        const errorList = document.getElementById('errorList');
+        errorList.innerHTML = `
+            <div class="bg-red-500/10 p-2 rounded text-sm text-red-400">
+                Row 5: Student with admission number "ADM/2024/9999" not found
+            </div>
+            <div class="bg-red-500/10 p-2 rounded text-sm text-red-400">
+                Row 12: Marks "105" exceeds maximum (100)
+            </div>
+        `;
+        
+        // Enable/disable upload button based on errors
+        if (parseInt(document.getElementById('validRecords').textContent) > 0) {
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-save mr-2"></i>Save Valid Records';
+        }
+    }
+
+    // Handle actual form submission for saving
+    function saveValidRecords() {
+        // Add a hidden input to indicate save mode
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'save_valid';
+        input.value = 'true';
+        document.getElementById('uploadForm').appendChild(input);
+        
+        // Submit the form
+        document.getElementById('uploadForm').submit();
+    }
+</script>
+
+<style>
+    /* Custom scrollbar for error list */
+    #errorList::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #errorList::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    #errorList::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+    }
+    
+    #errorList::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+</style>
+{% endblock %}

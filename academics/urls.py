@@ -46,12 +46,14 @@ urlpatterns = [
     
     # Results
     path('results/', views.result_list, name='result_list'),
+    path('results/export/', views.export_results, name='export_results'),
     path('exams/<int:exam_id>/results/entry/', views.result_entry, name='result_entry'),
     path('exams/<int:exam_id>/results/entry/<int:class_id>/', views.result_entry, name='result_entry_class'),
     path('exams/<int:exam_id>/results/bulk-upload/', views.result_bulk_upload, name='result_bulk_upload'),
     path('students/<int:student_id>/results/', views.student_results, name='student_results'),
     path('classes/<int:class_id>/results/', views.class_results, name='class_results'),
     path('classes/<int:class_id>/results/<int:term_id>/', views.class_results, name='class_results_term'),
+    path('exams/<int:exam_id>/results/template/', views.download_result_template, name='download_result_template'),
     
     # Rankings
     path('rankings/', views.ranking_dashboard, name='ranking_dashboard'),

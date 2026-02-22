@@ -489,11 +489,26 @@ def teacher_attendance_mark(request):
 @login_required
 def teacher_attendance_list(request):
     """List teacher attendance records"""
+    
+    # For admin users - show all attendance records
     if request.user.is_admin():
         attendance = TeacherAttendance.objects.all().select_related('teacher').order_by('-date')
+        is_admin = True
+    
+    # For teacher users - show only their own attendance
+    elif request.user.is_teacher():
+        try:
+            teacher = request.user.teacher_profile
+            attendance = TeacherAttendance.objects.filter(teacher=teacher).order_by('-date')
+            is_admin = False
+        except Teacher.DoesNotExist:
+            messages.error(request, 'Teacher profile not found. Please contact administrator.')
+            return redirect('dashboard:home')
+    
+    # For other users - redirect with error
     else:
-        teacher = get_object_or_404(Teacher, user=request.user)
-        attendance = teacher.attendance_records.all().order_by('-date')
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('dashboard:home')
     
     # Filter by date
     start_date = request.GET.get('start_date')
@@ -504,6 +519,7 @@ def teacher_attendance_list(request):
     if end_date:
         attendance = attendance.filter(date__lte=end_date)
     
+    # Pagination
     paginator = Paginator(attendance, 30)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -512,7 +528,7 @@ def teacher_attendance_list(request):
         'page_obj': page_obj,
         'start_date': start_date,
         'end_date': end_date,
-        'is_admin': request.user.is_admin(),
+        'is_admin': is_admin,
     }
     
     return render(request, 'teachers/attendance_list.html', context)

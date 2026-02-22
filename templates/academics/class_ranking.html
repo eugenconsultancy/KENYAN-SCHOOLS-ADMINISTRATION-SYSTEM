@@ -47,13 +47,19 @@
                         <div class="text-center">
                             <span class="text-sm text-white/60">Stream Average</span>
                             <span class="ml-2 text-lg font-bold text-white">
-                                {% with total=0 %}
-                                {% for summary in summaries %}
-                                    {% with total=total|add:summary.average %}
+                                {% if summaries %}
+                                    {% with total=0 %}
+                                        {% for summary in summaries %}
+                                            {% with total=total|add:summary.average %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                        {% widthratio total summaries.count 1 as average %}
+                                        {{ average|floatformat:1 }}
                                     {% endwith %}
-                                {% endfor %}
-                                {{ summaries|length > 0 ? (summaries|sum:'average') / summaries|length : 0|floatformat:1 }}
-                                </span>
+                                {% else %}
+                                    0.0
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
                 </div>

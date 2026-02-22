@@ -1,0 +1,56 @@
+{% load static %}
+<footer class="glass-footer py-3 px-4 text-center text-xs text-white/40 border-t border-white/10 mt-auto">
+    <div class="container mx-auto">
+        <p class="inline-block">
+            &copy; {% now "Y" %} <span class="font-medium text-white/60 hover:text-white/80 transition-colors">Kenyan Schools Management System</span>
+        </p>
+        <span class="mx-2 text-white/20">•</span>
+        <p class="inline-block">
+            v1.0.0
+        </p>
+        <span class="mx-2 text-white/20">•</span>
+        <p class="inline-block">
+            <span class="text-white/40">Eugen Consultancy Made with</span> 
+            <i class="fas fa-heart text-red-400/70 mx-1 text-[10px]"></i> 
+            <span class="text-white/40">in Kenya</span>
+        </p>
+    </div>
+</footer>
+
+<style>
+.glass-footer {
+    background: rgba(17, 25, 40, 0.6);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* Ultra minimal hover effects */
+.glass-footer .text-white\/60:hover {
+    color: rgba(255, 255, 255, 0.8);
+    transition: color 0.2s ease;
+}
+
+/* Ensure footer stays at bottom */
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    flex-shrink: 0;
+}
+</style>

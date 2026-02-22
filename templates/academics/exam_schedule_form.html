@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Exam Schedule - {{ exam.name }}{% endblock %}
+
+{% block page_title %}Add Schedule for {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center mb-4">
+            <a href="{% url 'academics:exam_detail' exam.id %}" class="text-white/60 hover:text-white mr-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h3 class="text-lg font-semibold text-white">{{ exam.name }}</h3>
+                <p class="text-sm text-white/60">{{ exam.term }} | {{ exam.get_exam_type_display }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.subject.id_for_label }}" class="form-label">
+                            Subject <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.subject.name }}" id="subjectSelect" class="glass-input" required>
+                            <option value="">Select Subject</option>
+                            {% for subject in form.subject.field.queryset %}
+                            <option value="{{ subject.id }}" {% if form.subject.value == subject.id %}selected{% endif %}>
+                                {{ subject.name }} ({{ subject.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.subject.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.subject.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.class_assigned.id_for_label }}" class="form-label">
+                            Class <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.class_assigned.name }}" id="classSelect" class="glass-input" required>
+                            <option value="">Select Class</option>
+                            {% for class in form.class_assigned.field.queryset %}
+                            <option value="{{ class.id }}" 
+                                    data-level="{{ class.class_level }}"
+                                    data-stream="{{ class.stream }}"
+                                    {% if form.class_assigned.value == class.id %}selected{% endif %}>
+                                Form {{ class.class_level }} {{ class.stream }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.class_assigned.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.class_assigned.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.date.id_for_label }}" class="form-label">
+                        Exam Date <span class="text-red-400">*</span>
+                    </label>
+                    <input type="date" name="{{ form.date.name }}" id="dateField" 
+                           value="{{ form.date.value|date:'Y-m-d'|default:'' }}" 
+                           class="glass-input" 
+                           min="{{ exam.start_date|date:'Y-m-d' }}"
+                           max="{{ exam.end_date|date:'Y-m-d' }}"
+                           required>
+                    {% if form.date.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.date.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-white/60 mt-1">Exam period: {{ exam.start_date|date:"d M Y" }} - {{ exam.end_date|date:"d M Y" }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label">
+                            Start Time <span class="text-red-400">*</span>
+                        </label>
+                        <input type="time" name="{{ form.start_time.name }}" id="startTime" 
+                               value="{{ form.start_time.value|time:'H:i'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.start_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.start_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label">
+                            End Time <span class="text-red-400">*</span>
+                        </label>
+                        <input type="time" name="{{ form.end_time.name }}" id="endTime" 
+                               value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.end_time.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.end_time.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.venue.id_for_label }}" class="form-label">
+                        Venue
+                    </label>
+                    <input type="text" name="{{ form.venue.name }}" id="venueField" 
+                           value="{{ form.venue.value|default:'' }}" 
+                           class="glass-input" 
+                           placeholder="e.g., Hall A, Room 101">
+                    {% if form.venue.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.venue.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Schedule Preview -->
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="text-white font-medium mb-3">Schedule Preview</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-white/60">Subject:</span>
+                        <span class="text-white ml-2" id="previewSubject">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Class:</span>
+                        <span class="text-white ml-2" id="previewClass">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Date:</span>
+                        <span class="text-white ml-2" id="previewDate">-</span>
+                    </div>
+                    <div>
+                        <span class="text-white/60">Time:</span>
+                        <span class="text-white ml-2" id="previewTime">-</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-white/60">Venue:</span>
+                        <span class="text-white ml-2" id="previewVenue">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conflict Check (simulated) -->
+            <div id="conflictWarning" class="hidden bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mt-1 mr-3"></i>
+                    <div>
+                        <h4 class="text-white font-medium">Potential Schedule Conflict</h4>
+                        <p class="text-sm text-yellow-400" id="conflictMessage"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'academics:exam_detail' exam.id %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>Add to Schedule
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Preview updates
+    const subjectSelect = document.getElementById('subjectSelect');
+    const classSelect = document.getElementById('classSelect');
+    const dateField = document.getElementById('dateField');
+    const startTime = document.getElementById('startTime');
+    const endTime = document.getElementById('endTime');
+    const venueField = document.getElementById('venueField');
+
+    function updatePreview() {
+        document.getElementById('previewSubject').textContent = 
+            subjectSelect.options[subjectSelect.selectedIndex]?.text.split(' (')[0] || '-';
+        
+        document.getElementById('previewClass').textContent = 
+            classSelect.options[classSelect.selectedIndex]?.text || '-';
+        
+        document.getElementById('previewDate').textContent = 
+            dateField.value ? new Date(dateField.value).toLocaleDateString('en-GB', { 
+                day: '2-digit', month: 'short', year: 'numeric' 
+            }) : '-';
+        
+        document.getElementById('previewTime').textContent = 
+            (startTime.value && endTime.value) ? `${startTime.value} - ${endTime.value}` : '-';
+        
+        document.getElementById('previewVenue').textContent = venueField.value || '-';
+    }
+
+    subjectSelect.addEventListener('change', updatePreview);
+    classSelect.addEventListener('change', updatePreview);
+    dateField.addEventListener('change', updatePreview);
+    startTime.addEventListener('change', updatePreview);
+    endTime.addEventListener('change', updatePreview);
+    venueField.addEventListener('input', updatePreview);
+
+    // Time validation
+    function validateTimes() {
+        if (startTime.value && endTime.value) {
+            const start = startTime.value.split(':').map(Number);
+            const end = endTime.value.split(':').map(Number);
+            const startMinutes = start[0] * 60 + start[1];
+            const endMinutes = end[0] * 60 + end[1];
+            
+            if (endMinutes <= startMinutes) {
+                alert('End time must be after start time');
+                endTime.value = '';
+            }
+        }
+    }
+
+    startTime.addEventListener('change', validateTimes);
+    endTime.addEventListener('change', validateTimes);
+
+    // Simulate conflict check
+    function checkConflicts() {
+        if (subjectSelect.value && classSelect.value && dateField.value && startTime.value) {
+            // This would normally be an AJAX call to check for conflicts
+            const conflictWarning = document.getElementById('conflictWarning');
+            const conflictMessage = document.getElementById('conflictMessage');
+            
+            // Simulate random conflict for demo (remove in production)
+            if (Math.random() > 0.7) {
+                conflictMessage.textContent = 'This time slot may conflict with another exam in the same class. Please verify.';
+                conflictWarning.classList.remove('hidden');
+            } else {
+                conflictWarning.classList.add('hidden');
+            }
+        }
+    }
+
+    subjectSelect.addEventListener('change', checkConflicts);
+    classSelect.addEventListener('change', checkConflicts);
+    dateField.addEventListener('change', checkConflicts);
+    startTime.addEventListener('change', checkConflicts);
+</script>
+{% endblock %}

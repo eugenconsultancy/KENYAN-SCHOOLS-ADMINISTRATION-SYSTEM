@@ -91,24 +91,74 @@ def student_detail(request, student_id):
     """View student details"""
     student = get_object_or_404(Student.objects.select_related('user'), id=student_id)
     
-    # Get related data
-    documents = student.documents.all()
-    notes = student.notes.all().order_by('-created_at')[:5]
-    parents = student.parents.all()
-    clubs = student.clubs.all()
-    sports = student.sports.all()
+    # Get related data with safe error handling
+    # Documents
+    try:
+        documents = student.documents.all() if hasattr(student, 'documents') else []
+    except (AttributeError, ValueError):
+        documents = []
+    
+    # Notes - using correct related_name from your model
+    try:
+        if hasattr(student, 'student_notes'):
+            notes = student.student_notes.all().order_by('-created_at')[:5]
+        elif hasattr(student, 'notes'):
+            notes = student.notes.all().order_by('-created_at')[:5]
+        else:
+            notes = []
+    except (AttributeError, ValueError):
+        notes = []
+    
+    # Parents
+    try:
+        parents = student.parents.all() if hasattr(student, 'parents') and student.parents else []
+    except (AttributeError, ValueError):
+        parents = []
+    
+    # Clubs
+    try:
+        clubs = student.clubs.all() if hasattr(student, 'clubs') and student.clubs else []
+    except (AttributeError, ValueError):
+        clubs = []
+    
+    # Sports
+    try:
+        sports = student.sports.all() if hasattr(student, 'sports') and student.sports else []
+    except (AttributeError, ValueError):
+        sports = []
     
     # Get academic data
-    results = Result.objects.filter(student=student).select_related('subject', 'term').order_by('-term__year', '-term__term')[:10]
+    try:
+        results = Result.objects.filter(student=student).select_related('subject', 'term').order_by('-term__year', '-term__term')[:10]
+    except Exception:
+        results = []
     
     # Get attendance data
-    attendance = Attendance.objects.filter(student=student).order_by('-date')[:30]
-    attendance_percentage = student.get_attendance_percentage()
+    try:
+        attendance = Attendance.objects.filter(student=student).order_by('-date')[:30]
+    except Exception:
+        attendance = []
+    
+    try:
+        attendance_percentage = student.get_attendance_percentage() if hasattr(student, 'get_attendance_percentage') else 0
+    except Exception:
+        attendance_percentage = 0
     
     # Get financial data
-    invoices = Invoice.objects.filter(student=student).order_by('-created_at')[:5]
-    total_paid = Payment.objects.filter(student=student).aggregate(total=Sum('amount'))['total'] or 0
-    outstanding_balance = student.get_outstanding_balance()
+    try:
+        invoices = Invoice.objects.filter(student=student).order_by('-created_at')[:5]
+    except Exception:
+        invoices = []
+    
+    try:
+        total_paid = Payment.objects.filter(student=student).aggregate(total=Sum('amount'))['total'] or 0
+    except Exception:
+        total_paid = 0
+    
+    try:
+        outstanding_balance = student.get_outstanding_balance() if hasattr(student, 'get_outstanding_balance') else 0
+    except Exception:
+        outstanding_balance = 0
     
     context = {
         'student': student,
@@ -127,6 +177,7 @@ def student_detail(request, student_id):
     
     return render(request, 'students/student_detail.html', context)
 
+    
 @login_required
 @admin_required
 def student_create(request):

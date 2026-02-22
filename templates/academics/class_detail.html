@@ -148,12 +148,64 @@
                     <a href="{% url 'academics:class_results' class_obj.id %}?term={{ current_term.id }}" class="glass-button w-full text-center">
                         <i class="fas fa-chart-line mr-2"></i>View Results
                     </a>
-                    <a href="{% url 'reports:class_result_slip' class_obj.id %}" class="glass-button w-full text-center">
-                        <i class="fas fa-file-pdf mr-2"></i>Download Report
-                    </a>
+                    
+                    <!-- FIXED: Download Report button with proper exam selection -->
+                    {% if class_exams %}
+                        {% if class_exams|length == 1 %}
+                            {% with exam=class_exams.0 %}
+                            <a href="{% url 'reports:class_result_slip' class_obj.id exam.id %}" class="glass-button w-full text-center bg-green-600/50">
+                                <i class="fas fa-file-pdf mr-2"></i>Download {{ exam.name }} Report
+                            </a>
+                            {% endwith %}
+                        {% else %}
+                            <div class="space-y-2">
+                                <label class="form-label text-sm">Select Exam Report:</label>
+                                <select id="examSelect" class="glass-input text-sm mb-2">
+                                    <option value="">Choose an exam...</option>
+                                    {% for exam in class_exams %}
+                                    <option value="{{ exam.id }}">{{ exam.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <a href="#" id="downloadReportBtn" class="glass-button w-full text-center opacity-50 pointer-events-none">
+                                    <i class="fas fa-file-pdf mr-2"></i>Download Report
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <button class="glass-button w-full text-center opacity-50 cursor-not-allowed" disabled>
+                            <i class="fas fa-file-pdf mr-2"></i>No Exams Available
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{% if class_exams|length > 1 %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const examSelect = document.getElementById('examSelect');
+        const downloadBtn = document.getElementById('downloadReportBtn');
+        
+        if (examSelect && downloadBtn) {
+            examSelect.addEventListener('change', function() {
+                const examId = this.value;
+                
+                if (examId) {
+                    // Construct URL with class_id and selected exam_id
+                    const baseUrl = "{% url 'reports:class_result_slip' class_obj.id 0 %}".replace('0', examId);
+                    downloadBtn.href = baseUrl;
+                    downloadBtn.classList.remove('opacity-50', 'pointer-events-none');
+                    downloadBtn.classList.add('bg-green-600/50');
+                } else {
+                    downloadBtn.href = '#';
+                    downloadBtn.classList.add('opacity-50', 'pointer-events-none');
+                    downloadBtn.classList.remove('bg-green-600/50');
+                }
+            });
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

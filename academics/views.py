@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import models
 from django.db.models import Q, Count, Avg, Sum
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
@@ -504,41 +505,32 @@ def result_entry(request, exam_id, class_id=None):
     
     # Get class if specified
     class_obj = None
+    students = []
+    class_mappings = {}  # Add this to store class ID mappings
+    
     if class_id:
         class_obj = get_object_or_404(Class, id=class_id)
-        students = Student.objects.filter(current_class=class_obj.class_level, stream=class_obj.stream, is_active=True)
+        students = Student.objects.filter(
+            current_class=class_obj.class_level, 
+            stream=class_obj.stream, 
+            is_active=True
+        ).order_by('user__first_name')
     else:
-        students = Student.objects.filter(is_active=True)
+        # Get all classes for the current academic year
+        from academics.models import Class, AcademicYear
+        current_year = AcademicYear.objects.filter(is_current=True).first()
+        if current_year:
+            classes = Class.objects.filter(academic_year=current_year)
+            # Create a mapping of "level_stream" to class_id
+            for c in classes:
+                key = f"{c.class_level}_{c.stream}"
+                class_mappings[key] = c.id
+        
+        class_levels = [1, 2, 3, 4]
+        streams = ['East', 'West', 'North', 'South']
     
     # Get subjects for this exam
     subjects = exam.subjects.all()
-    
-    if request.method == 'POST':
-        # Process results
-        for student in students:
-            for subject in subjects:
-                marks_key = f"marks_{student.id}_{subject.id}"
-                if marks_key in request.POST:
-                    marks = request.POST.get(marks_key)
-                    if marks:
-                        # Check if result exists
-                        result, created = Result.objects.update_or_create(
-                            student=student,
-                            exam=exam,
-                            subject=subject,
-                            defaults={
-                                'marks': marks,
-                                'entered_by': request.user,
-                            }
-                        )
-        
-        messages.success(request, 'Results saved successfully.')
-        
-        # Update rankings
-        if class_obj:
-            RankingService.update_student_term_summaries_for_class(class_obj, exam.term)
-        
-        return redirect('academics:exam_detail', exam_id=exam.id)
     
     # Get existing results
     existing_results = {}
@@ -553,7 +545,11 @@ def result_entry(request, exam_id, class_id=None):
         'students': students,
         'subjects': subjects,
         'existing_results': existing_results,
+        'class_levels': class_levels if not class_obj else None,
+        'streams': streams if not class_obj else None,
+        'class_mappings': class_mappings,  # Add this to context
     }
+    
     return render(request, 'academics/result_entry.html', context)
 
 @login_required
@@ -839,24 +835,138 @@ def performance_analysis(request):
 @login_required
 def homework_list(request):
     """List homework assignments"""
-    if request.user.is_teacher():
-        teacher = request.user.teacher_profile
-        homeworks = Homework.objects.filter(teacher=teacher).select_related('subject', 'class_assigned')
-    elif request.user.is_student():
-        student = request.user.student_profile
-        homeworks = Homework.objects.filter(
-            class_assigned__class_level=student.current_class,
-            class_assigned__stream=student.stream
-        ).select_related('subject', 'teacher')
-    else:
-        homeworks = Homework.objects.all().select_related('subject', 'teacher', 'class_assigned')
     
+    # Base queryset
+    homeworks = Homework.objects.all().select_related(
+        'subject', 'teacher', 'class_assigned'
+    )
+    
+    # Filter based on user role
+    if request.user.role == 'teacher':
+        # Teachers see homework they created
+        try:
+            teacher = request.user.teacher_profile
+            homeworks = homeworks.filter(teacher=teacher)
+        except Teacher.DoesNotExist:
+            # Teacher profile doesn't exist, show empty queryset
+            homeworks = Homework.objects.none()
+            messages.warning(request, 'Your teacher profile is not fully set up. Please contact administrator.')
+    
+    elif request.user.role == 'student':
+        # Students see homework for their class
+        try:
+            student = request.user.student_profile
+            homeworks = homeworks.filter(
+                class_assigned__class_level=student.current_class,
+                class_assigned__stream=student.stream
+            )
+        except Student.DoesNotExist:
+            # Student profile doesn't exist, show empty queryset
+            homeworks = Homework.objects.none()
+            messages.warning(request, 'Your student profile is not fully set up. Please contact administrator.')
+    
+    # Admin and other roles see all homework
+    # No additional filtering needed
+    
+    # Order by due date
     homeworks = homeworks.order_by('-due_date')
     
+    # Get statistics
+    total_homeworks = homeworks.count()
+    today = timezone.now().date()
+    
+    active_count = homeworks.filter(
+        due_date__gte=today,
+        is_submitted=False
+    ).count()
+    
+    overdue_count = homeworks.filter(
+        due_date__lt=today,
+        is_submitted=False
+    ).count()
+    
+    # Calculate completion rate (for teachers/admin)
+    completion_rate = 0
+    if homeworks.exists() and (request.user.role in ['admin', 'teacher']):
+        # Get total submissions
+        total_submissions = HomeworkSubmission.objects.filter(
+            homework__in=homeworks
+        ).count()
+        
+        # Calculate expected submissions properly WITHOUT using 'students_count' field
+        expected_submissions = 0
+        from students.models import Student
+        
+        # Iterate through each homework and count students in the target class
+        for homework in homeworks:
+            student_count = Student.objects.filter(
+                current_class=homework.class_assigned.class_level,
+                stream=homework.class_assigned.stream,
+                is_active=True
+            ).count()
+            expected_submissions += student_count
+        
+        completion_rate = (total_submissions / expected_submissions * 100) if expected_submissions > 0 else 0
+    
+    # Get subjects and classes for filters
+    subjects = Subject.objects.filter(is_active=True)
+    classes = Class.objects.filter(academic_year__is_current=True)
+    
+    # Apply filters from request
+    if request.GET.get('subject'):
+        homeworks = homeworks.filter(subject_id=request.GET.get('subject'))
+    if request.GET.get('class'):
+        homeworks = homeworks.filter(class_assigned_id=request.GET.get('class'))
+    
+    # Status filter
+    status = request.GET.get('status')
+    if status == 'active':
+        homeworks = homeworks.filter(due_date__gte=today, is_submitted=False)
+    elif status == 'overdue':
+        homeworks = homeworks.filter(due_date__lt=today, is_submitted=False)
+    elif status == 'completed':
+        homeworks = homeworks.filter(is_submitted=True)
+    
+    # Pagination
+    paginator = Paginator(homeworks, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'homeworks': homeworks,
+        'homeworks': page_obj,
+        'total_homeworks': total_homeworks,
+        'active_count': active_count,
+        'overdue_count': overdue_count,
+        'completion_rate': completion_rate,
+        'subjects': subjects,
+        'classes': classes,
+        'today': today,
     }
+    
     return render(request, 'academics/homework_list.html', context)
+
+    
+@login_required
+@teacher_required
+def download_result_template(request, exam_id):
+    """Download CSV template for bulk upload"""
+    import csv
+    from django.http import HttpResponse
+    
+    exam = get_object_or_404(Exam, id=exam_id)
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="results_template_{exam.id}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['admission_number', 'subject_code', 'marks', 'remarks'])
+    
+    # Add sample rows
+    writer.writerow(['ADM/2024/1001', 'MAT', '', ''])
+    writer.writerow(['ADM/2024/1001', 'ENG', '', ''])
+    writer.writerow(['ADM/2024/1002', 'MAT', '', ''])
+    
+    return response
 
 @login_required
 @teacher_required
@@ -898,6 +1008,8 @@ def homework_detail(request, homework_id):
     }
     
     return render(request, 'academics/homework_detail.html', context)
+
+
 
 @login_required
 @teacher_required
@@ -993,3 +1105,54 @@ def get_teachers_for_subject(request, subject_id):
         data = [{'id': ts.teacher.id, 'name': ts.teacher.get_full_name()} for ts in teacher_subjects]
         return JsonResponse(data, safe=False)
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def export_results(request):
+    """Export results to CSV"""
+    import csv
+    from django.http import HttpResponse
+    from django.db.models import Q
+    
+    # Get filters from request
+    exam_id = request.GET.get('exam')
+    class_level = request.GET.get('class')
+    subject_id = request.GET.get('subject')
+    
+    # Base queryset
+    results = Result.objects.all().select_related(
+        'student', 'exam', 'subject', 'student__user'
+    )
+    
+    # Apply filters
+    if exam_id:
+        results = results.filter(exam_id=exam_id)
+    if class_level:
+        results = results.filter(student__current_class=class_level)
+    if subject_id:
+        results = results.filter(subject_id=subject_id)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="results_export.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Student Name', 'Admission No.', 'Class', 'Exam', 'Subject',
+        'Marks', 'Grade', 'Points', 'Remarks'
+    ])
+    
+    for result in results:
+        writer.writerow([
+            result.student.get_full_name(),
+            result.student.admission_number,
+            f"Form {result.student.current_class} {result.student.stream}",
+            result.exam.name,
+            result.subject.name,
+            result.marks,
+            result.grade,
+            result.points,
+            result.remarks
+        ])
+    
+    return response

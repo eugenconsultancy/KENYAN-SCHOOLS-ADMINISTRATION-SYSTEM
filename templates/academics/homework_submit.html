@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Submit Homework - {{ homework.title }}{% endblock %}
+
+{% block page_title %}Submit Homework{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Homework Info Card -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <span class="badge badge-info mb-2">{{ homework.subject.name }}</span>
+                <h2 class="text-2xl font-bold text-white">{{ homework.title }}</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-white/60">Due Date</p>
+                <p class="text-lg font-semibold {% if homework.due_date < today %}text-red-400{% else %}text-green-400{% endif %}">
+                    {{ homework.due_date|date:"l, d M Y" }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white/5 rounded-lg">
+            <div>
+                <p class="text-sm text-white/60">Subject</p>
+                <p class="text-white font-medium">{{ homework.subject.name }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-white/60">Teacher</p>
+                <p class="text-white font-medium">{{ homework.teacher.get_full_name }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-white/60">Class</p>
+                <p class="text-white font-medium">Form {{ homework.class_assigned.class_level }} {{ homework.class_assigned.stream }}</p>
+            </div>
+        </div>
+        
+        {% if homework.description %}
+        <div class="mt-4 p-4 bg-white/5 rounded-lg">
+            <h4 class="text-white font-medium mb-2">Instructions</h4>
+            <p class="text-white/80 whitespace-pre-wrap">{{ homework.description }}</p>
+        </div>
+        {% endif %}
+        
+        {% if homework.attachments %}
+        <div class="mt-4">
+            <h4 class="text-white font-medium mb-2">Reference Materials</h4>
+            <a href="{{ homework.attachments.url }}" target="_blank" 
+               class="inline-flex items-center text-blue-400 hover:text-blue-300">
+                <i class="fas fa-paperclip mr-2"></i>
+                {{ homework.attachments.name|slice:"14:" }}
+                <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Submission Form -->
+    <div class="glass-card p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Your Submission</h3>
+        
+        <form method="post" enctype="multipart/form-data" id="submissionForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="space-y-6">
+                <!-- Text Submission -->
+                <div>
+                    <label for="{{ form.content.id_for_label }}" class="form-label">
+                        Your Answer / Work
+                    </label>
+                    <textarea name="{{ form.content.name }}" id="content" rows="8" 
+                              class="glass-input" 
+                              placeholder="Type your answer here...">{{ form.content.value|default:'' }}</textarea>
+                    {% if form.content.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.content.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-white/40 mt-1">You can type your answer directly or upload a file below</p>
+                </div>
+
+                <!-- File Upload -->
+                <div>
+                    <label for="{{ form.attachment.id_for_label }}" class="form-label">
+                        Upload File (Optional)
+                    </label>
+                    <div class="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-blue-500/50 transition-colors"
+                         onclick="document.getElementById('fileInput').click()">
+                        
+                        <input type="file" name="{{ form.attachment.name }}" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                        
+                        <div id="uploadPrompt">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-white/40 mb-2"></i>
+                            <p class="text-white mb-1">Click to upload your file</p>
+                            <p class="text-xs text-white/40">PDF, DOC, DOCX, TXT, JPG, PNG (Max 10MB)</p>
+                        </div>
+                        
+                        <div id="filePreview" class="hidden">
+                            <div class="flex items-center justify-center space-x-3">
+                                <i class="fas fa-file text-blue-400 text-2xl"></i>
+                                <span class="text-white" id="fileName"></span>
+                                <button type="button" onclick="removeFile()" class="text-white/40 hover:text-white">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% if form.attachment.errors %}
+                    <p class="text-sm text-red-400 mt-2">{{ form.attachment.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Submission Guidelines -->
+                <div class="bg-blue-500/10 rounded-lg p-4">
+                    <h4 class="text-white font-medium mb-2 flex items-center">
+                        <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                        Submission Guidelines
+                    </h4>
+                    <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                        <li>Ensure your work is original and complete</li>
+                        <li>Include your name and admission number in the file name</li>
+                        <li>You can submit either text or a file, or both</li>
+                        <li>Late submissions may be penalized</li>
+                        <li>You can only submit once - make sure it's your final work</li>
+                    </ul>
+                </div>
+
+                <!-- Confirmation Checkbox -->
+                <div class="flex items-center">
+                    <input type="checkbox" id="confirmOriginal" class="form-checkbox h-4 w-4 text-blue-600" required>
+                    <label for="confirmOriginal" class="ml-2 text-sm text-white/80">
+                        I confirm that this is my own original work
+                    </label>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                    <a href="{% url 'academics:homework_detail' homework.id %}" class="glass-button">
+                        Cancel
+                    </a>
+                    <button type="submit" class="glass-button bg-green-600/50" id="submitBtn">
+                        <i class="fas fa-upload mr-2"></i>Submit Homework
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Previous Submissions (if any) -->
+    {% if previous_submissions %}
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Your Previous Submissions</h3>
+        <div class="space-y-3">
+            {% for sub in previous_submissions %}
+            <div class="bg-white/5 rounded-lg p-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                        <div>
+                            <p class="text-white">Submitted on {{ sub.submission_date|date:"d M Y H:i" }}</p>
+                            {% if sub.marks %}
+                            <p class="text-sm text-green-400">Marks: {{ sub.marks }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if sub.attachment %}
+                    <a href="{{ sub.attachment.url }}" target="_blank" class="text-white/60 hover:text-white">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% if sub.feedback %}
+                <div class="mt-2 p-2 bg-white/5 rounded">
+                    <p class="text-sm text-white/80"><span class="text-white/60">Feedback:</span> {{ sub.feedback }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // File upload handling
+    const fileInput = document.getElementById('fileInput');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size exceeds 10MB limit');
+                this.value = '';
+                return;
+            }
+            
+            fileName.textContent = file.name;
+            uploadPrompt.classList.add('hidden');
+            filePreview.classList.remove('hidden');
+        }
+    });
+
+    function removeFile() {
+        fileInput.value = '';
+        uploadPrompt.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+    }
+
+    // Form submission loading state
+    document.getElementById('submissionForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+    });
+
+    // Auto-save draft functionality (optional)
+    let draftTimer;
+    const contentField = document.getElementById('content');
+    
+    function saveDraft() {
+        const content = contentField.value;
+        localStorage.setItem(`homework_draft_{{ homework.id }}`, content);
+        console.log('Draft saved');
+    }
+    
+    contentField.addEventListener('input', function() {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(saveDraft, 2000);
+    });
+    
+    // Load draft on page load
+    window.addEventListener('load', function() {
+        const savedDraft = localStorage.getItem(`homework_draft_{{ homework.id }}`);
+        if (savedDraft && !contentField.value) {
+            if (confirm('You have an unsaved draft. Would you like to load it?')) {
+                contentField.value = savedDraft;
+            }
+        }
+    });
+</script>
+{% endblock %}

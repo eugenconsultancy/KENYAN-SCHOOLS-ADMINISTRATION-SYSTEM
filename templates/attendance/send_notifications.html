@@ -1,0 +1,448 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Send Attendance Notifications - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Send Attendance Notifications{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Summary Card -->
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Today's Absent Students</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-400">{{ absent_count }}</div>
+                <div class="text-sm text-white/60">Absent Today</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-yellow-400">{{ late_count }}</div>
+                <div class="text-sm text-white/60">Late Today</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-400">{{ with_phone_count }}</div>
+                <div class="text-sm text-white/60">Has Parent Phone</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="flex space-x-3">
+            <button onclick="selectAll()" class="glass-button">
+                <i class="fas fa-check-double mr-2"></i>Select All
+            </button>
+            <button onclick="deselectAll()" class="glass-button">
+                <i class="fas fa-times mr-2"></i>Deselect All
+            </button>
+            <button onclick="sendSelected()" class="glass-button bg-green-600/50">
+                <i class="fas fa-paper-plane mr-2"></i>Send to Selected
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="glass-card p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="form-label">Class</label>
+                <select id="classFilter" class="glass-input" onchange="filterStudents()">
+                    <option value="">All Classes</option>
+                    {% for level in class_levels %}
+                    <option value="{{ level.0 }}">{{ level.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Stream</label>
+                <select id="streamFilter" class="glass-input" onchange="filterStudents()">
+                    <option value="">All Streams</option>
+                    {% for stream in streams %}
+                    <option value="{{ stream.0 }}">{{ stream.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Status</label>
+                <select id="statusFilter" class="glass-input" onchange="filterStudents()">
+                    <option value="">All</option>
+                    <option value="absent">Absent</option>
+                    <option value="late">Late</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Message Template</label>
+                <select id="templateSelect" class="glass-input">
+                    <option value="">Select Template</option>
+                    {% for template in templates %}
+                    <option value="{{ template.id }}">{{ template.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Preview -->
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Message Preview</h3>
+        <div id="messagePreview" class="bg-white/5 rounded-lg p-4">
+            <p class="text-white/80" id="previewText">
+                Dear Parent, your child [Student Name] was marked [absent/late] on [Date]. 
+                {% if reason %}Reason: [Reason]. {% endif %}
+                Please contact the school for more information.
+            </p>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">Customize Message</label>
+            <textarea id="customMessage" rows="3" class="glass-input w-full" 
+                      placeholder="Enter custom message or select a template above">Dear Parent, your child was marked absent today. Please ensure regular attendance.</textarea>
+        </div>
+    </div>
+
+    <!-- Students List -->
+    <div class="glass-table overflow-hidden">
+        <table class="min-w-full">
+            <thead>
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">
+                        <input type="checkbox" id="selectAll" class="form-checkbox h-4 w-4 text-blue-600">
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Student</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase">Parent Phone</th>
+                     <th class="px-6 py-3 text-center text-xs font-medium text-white/80 uppercase">Notify</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10" id="studentsTable">
+                {% for record in absent_students %}
+                <tr class="hover:bg-white/5 transition-colors student-row" 
+                    data-class="{{ record.class_level }}" 
+                    data-stream="{{ record.stream }}"
+                    data-status="{{ record.status }}">
+                    <td class="px-6 py-4">
+                        <input type="checkbox" class="form-checkbox h-4 w-4 text-blue-600 student-checkbox" 
+                               value="{{ record.student.id }}" 
+                               {% if record.student.parent_phone %}checked{% endif %}
+                               {% if not record.student.parent_phone %}disabled{% endif %}>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <img src="{{ record.student.user.get_profile_picture }}" 
+                                 alt="{{ record.student.get_full_name }}" 
+                                 class="h-8 w-8 rounded-full object-cover mr-2">
+                            <div>
+                                <p class="text-sm font-medium text-white">{{ record.student.get_full_name }}</p>
+                                <p class="text-xs text-white/40">{{ record.student.admission_number }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-white">Form {{ record.class_level }} {{ record.stream }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="badge {% if record.status == 'absent' %}badge-error{% else %}badge-warning{% endif %}">
+                            {{ record.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if record.student.parent_phone %}
+                        <span class="text-white">{{ record.student.parent_phone }}</span>
+                        {% else %}
+                        <span class="text-white/40">No phone</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <input type="text" class="glass-input text-sm reason-input" 
+                               placeholder="Reason (optional)"
+                               data-student="{{ record.student.id }}"
+                               value="{{ record.reason|default:'' }}">
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if record.student.parent_phone %}
+                        <span class="badge badge-success">Eligible</span>
+                        {% else %}
+                        <span class="badge badge-error">No phone</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-check-circle text-3xl text-green-400"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">All Students Present</h3>
+                            <p class="text-white/60">No absent or late students to notify today.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="glass-card mt-6 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white/60">Selected Students</p>
+                <p class="text-2xl font-bold text-white" id="selectedCount">0</p>
+            </div>
+            <div>
+                <p class="text-white/60">With Phone Numbers</p>
+                <p class="text-2xl font-bold text-green-400" id="withPhoneCount">{{ with_phone_count }}</p>
+            </div>
+            <div>
+                <p class="text-white/60">Without Phone</p>
+                <p class="text-2xl font-bold text-red-400" id="withoutPhoneCount">{{ without_phone_count }}</p>
+            </div>
+            <button onclick="sendNotifications()" class="glass-button bg-green-600/50" id="sendBtn">
+                <i class="fas fa-paper-plane mr-2"></i>Send Notifications
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Confirm Send</h3>
+        <p class="text-white/80 mb-4" id="confirmMessage">Are you sure you want to send notifications to <span id="confirmCount">0</span> parents?</p>
+        <div class="bg-yellow-500/10 p-3 rounded-lg mb-4">
+            <p class="text-sm text-yellow-400">
+                <i class="fas fa-info-circle mr-2"></i>
+                This will send SMS notifications to the selected parents.
+            </p>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeConfirmModal()" class="glass-button">Cancel</button>
+            <button onclick="executeSend()" class="glass-button bg-green-600/50">Send</button>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Modal -->
+<div id="progressModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Sending Notifications</h3>
+        <div class="mb-4">
+            <div class="flex justify-between text-sm text-white/60 mb-2">
+                <span>Progress</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress h-3">
+                <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+            </div>
+        </div>
+        <p class="text-white/80 text-sm" id="progressStatus">Initializing...</p>
+    </div>
+</div>
+
+<script>
+    // Update selected count
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        const selectedCount = document.getElementById('selectedCount');
+        const withPhone = document.querySelectorAll('.student-checkbox:enabled:checked').length;
+        selectedCount.textContent = withPhone;
+        
+        // Update send button state
+        const sendBtn = document.getElementById('sendBtn');
+        if (withPhone > 0) {
+            sendBtn.disabled = false;
+            sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            sendBtn.disabled = true;
+            sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    // Select/Deselect all
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:enabled');
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+
+    function selectAll() {
+        document.querySelectorAll('.student-checkbox:enabled').forEach(cb => cb.checked = true);
+        document.getElementById('selectAll').checked = true;
+        updateSelectedCount();
+    }
+
+    function deselectAll() {
+        document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        updateSelectedCount();
+    }
+
+    // Individual checkbox change
+    document.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+
+    // Filter students
+    function filterStudents() {
+        const classFilter = document.getElementById('classFilter').value;
+        const streamFilter = document.getElementById('streamFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        const rows = document.querySelectorAll('.student-row');
+        
+        rows.forEach(row => {
+            let show = true;
+            
+            if (classFilter && row.dataset.class !== classFilter) show = false;
+            if (streamFilter && row.dataset.stream !== streamFilter) show = false;
+            if (statusFilter && row.dataset.status !== statusFilter) show = false;
+            
+            row.style.display = show ? '' : 'none';
+        });
+        
+        updateSelectedCount();
+    }
+
+    // Template selection
+    document.getElementById('templateSelect').addEventListener('change', function() {
+        const templateId = this.value;
+        if (templateId) {
+            fetch(`/attendance/api/notification-template/${templateId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('customMessage').value = data.message;
+                    updatePreview();
+                });
+        }
+    });
+
+    // Update preview
+    function updatePreview() {
+        const message = document.getElementById('customMessage').value;
+        const preview = document.getElementById('previewText');
+        preview.textContent = message || 'Dear Parent, your child was marked absent today. Please ensure regular attendance.';
+    }
+
+    document.getElementById('customMessage').addEventListener('input', updatePreview);
+    updatePreview();
+
+    // Send notifications
+    function sendNotifications() {
+        const selected = [];
+        document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+            const row = cb.closest('tr');
+            const reason = row.querySelector('.reason-input').value;
+            selected.push({
+                id: cb.value,
+                reason: reason
+            });
+        });
+        
+        if (selected.length === 0) {
+            alert('Please select at least one student');
+            return;
+        }
+        
+        document.getElementById('confirmCount').textContent = selected.length;
+        openConfirmModal();
+    }
+
+    // Modal functions
+    function openConfirmModal() {
+        document.getElementById('confirmModal').classList.remove('hidden');
+        document.getElementById('confirmModal').classList.add('flex');
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        document.getElementById('confirmModal').classList.remove('flex');
+    }
+
+    // Execute send
+    function executeSend() {
+        closeConfirmModal();
+        openProgressModal();
+        
+        const selected = [];
+        document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+            const row = cb.closest('tr');
+            const reason = row.querySelector('.reason-input').value;
+            selected.push({
+                id: cb.value,
+                reason: reason
+            });
+        });
+        
+        const message = document.getElementById('customMessage').value;
+        
+        // Send in batches
+        let completed = 0;
+        const total = selected.length;
+        
+        function sendBatch(batch) {
+            fetch('/attendance/api/send-notifications/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    students: batch,
+                    message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                completed += batch.length;
+                const percent = Math.round((completed / total) * 100);
+                document.getElementById('progressBar').style.width = percent + '%';
+                document.getElementById('progressPercent').textContent = percent + '%';
+                document.getElementById('progressStatus').textContent = 
+                    `Sent ${completed} of ${total} notifications`;
+                
+                if (completed < total) {
+                    // Send next batch
+                    const nextBatch = selected.slice(completed, completed + 10);
+                    sendBatch(nextBatch);
+                } else {
+                    // Complete
+                    document.getElementById('progressStatus').textContent = 'All notifications sent!';
+                    setTimeout(() => {
+                        closeProgressModal();
+                        window.location.href = "{% url 'attendance:notification_list' %}";
+                    }, 1500);
+                }
+            });
+        }
+        
+        // Start with first batch of 10
+        const firstBatch = selected.slice(0, 10);
+        sendBatch(firstBatch);
+    }
+
+    function openProgressModal() {
+        document.getElementById('progressModal').classList.remove('hidden');
+        document.getElementById('progressModal').classList.add('flex');
+    }
+
+    function closeProgressModal() {
+        document.getElementById('progressModal').classList.add('hidden');
+        document.getElementById('progressModal').classList.remove('flex');
+    }
+
+    // Close modals when clicking outside
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+        if (e.target === this) closeConfirmModal();
+    });
+    
+    document.getElementById('progressModal').addEventListener('click', function(e) {
+        if (e.target === this) closeProgressModal();
+    });
+
+    // Initialize
+    updateSelectedCount();
+</script>
+{% endblock %}
+                 

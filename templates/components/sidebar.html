@@ -7,7 +7,7 @@
     </div>
     
     <!-- Navigation -->
-    <nav class="mt-6 pb-24">
+    <nav class="mt-6 pb-6">  <!-- Changed pb-24 to pb-6 since we removed user info section -->
         <ul class="space-y-1 px-3">
             <!-- Dashboard - Accessible to all authenticated users -->
             <li>
@@ -340,20 +340,7 @@
         </ul>
     </nav>
     
-    <!-- User Info -->
-    <div class="absolute bottom-0 left-0 right-0 p-4 bg-white/5 backdrop-blur-md border-t border-white/10">
-        <div class="flex items-center">
-            <img src="{{ user.get_profile_picture }}" alt="{{ user.get_full_name }}" 
-                 class="h-10 w-10 rounded-full object-cover border-2 border-white/50">
-            <div class="ml-3 flex-1 min-w-0">
-                <p class="text-sm font-medium text-white truncate">{{ user.get_full_name|default:user.username }}</p>
-                <p class="text-xs text-white/60">{{ user.get_role_display }}</p>
-            </div>
-            <a href="{% url 'accounts:logout' %}" class="text-white/60 hover:text-white transition-colors" title="Logout">
-                <i class="fas fa-sign-out-alt"></i>
-            </a>
-        </div>
-    </div>
+    <!-- REMOVED: Duplicate user profile section - now only appears in navbar -->
 </aside>
 
 <style>
@@ -399,10 +386,5 @@
     color: rgba(255, 255, 255, 0.4);
     font-weight: 600;
     letter-spacing: 0.05em;
-}
-
-/* User info section */
-.absolute.bottom-0 {
-    background: linear-gradient(to top, rgba(17, 25, 40, 0.95), rgba(17, 25, 40, 0.8));
 }
 </style>

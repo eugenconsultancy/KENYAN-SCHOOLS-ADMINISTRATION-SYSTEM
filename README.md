@@ -682,3 +682,20 @@ Active: ✅ checked
 ```
 
 This creates a complete student profile with realistic Kenyan data that will work well with your system.
+
+
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\academic_year_form.html 
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\academic_year_list.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\exam_schedule_form.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\homework_submit.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\result_list.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\student_results.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\accounts\notification_detail.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\attendance\notification_list.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\attendance\send_notifications.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\components\modals.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\students\student_subjects.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\teachers\salary_form.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\teachers\document_upload.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\accounts\notification_detail.html
+C:\Users\GATARA-BJTU\Desktop\kenyan_schools_system\templates\academics\academic_year_form.html

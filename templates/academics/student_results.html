@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.get_full_name }} - Academic Results{% endblock %}
+
+{% block page_title %}Academic Results: {{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Student Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="{{ student.user.get_profile_picture }}" alt="{{ student.get_full_name }}" 
+                     class="h-16 w-16 rounded-full object-cover border-2 border-white mr-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ student.get_full_name }}</h2>
+                    <div class="flex items-center space-x-4 mt-1">
+                        <span class="text-white/60">Admission: {{ student.admission_number }}</span>
+                        <span class="text-white/60">Class: {{ student.get_current_class_name }}</span>
+                        <span class="badge {% if student.is_active %}badge-success{% else %}badge-error{% endif %}">
+                            {{ student.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-2">
+                <a href="{% url 'reports:student_report' student.id %}" class="glass-button">
+                    <i class="fas fa-file-pdf mr-2"></i>Download Full Report
+                </a>
+                <a href="{% url 'students:detail' student.id %}" class="glass-button">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-3xl font-bold text-white">{{ terms_count }}</div>
+            <div class="text-sm text-white/60">Terms Completed</div>
+        </div>
+        
+        <div class="glass-card p-4 text-center">
+            <div class="text-3xl font-bold text-blue-400">{{ overall_average|floatformat:1 }}%</div>
+            <div class="text-sm text-white/60">Overall Average</div>
+        </div>
+        
+        <div class="glass-card p-4 text-center">
+            <div class="text-3xl font-bold text-green-400">{{ overall_grade }}</div>
+            <div class="text-sm text-white/60">Overall Mean Grade</div>
+        </div>
+        
+        <div class="glass-card p-4 text-center">
+            <div class="text-3xl font-bold text-purple-400">{{ total_points }}</div>
+            <div class="text-sm text-white/60">Total Points</div>
+        </div>
+    </div>
+
+    <!-- Performance Trend Chart -->
+    {% if terms|length > 1 %}
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Performance Trend</h3>
+        </div>
+        <div class="p-6">
+            <canvas id="performanceTrend" height="100"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results by Term -->
+    <div class="space-y-6">
+        {% for term_key, term_data in terms.items %}
+        <div class="glass-card overflow-hidden">
+            <!-- Term Header -->
+            <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 px-6 py-4">
+                <div class="flex flex-wrap items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold text-white">{{ term_key }}</h3>
+                        <p class="text-sm text-white/60">
+                            {{ term_data.term.start_date|date:"d M Y" }} - {{ term_data.term.end_date|date:"d M Y" }}
+                        </p>
+                    </div>
+                    
+                    <div class="flex space-x-6">
+                        <div class="text-center">
+                            <span class="text-sm text-white/60">Average</span>
+                            <span class="ml-2 text-xl font-bold text-white">{{ term_data.average|floatformat:1 }}%</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm text-white/60">Mean Grade</span>
+                            <span class="ml-2">
+                                <span class="badge 
+                                    {% if term_data.mean_grade == 'A' or term_data.mean_grade == 'A-' %}badge-success
+                                    {% elif term_data.mean_grade == 'B+' or term_data.mean_grade == 'B' or term_data.mean_grade == 'B-' %}badge-info
+                                    {% elif term_data.mean_grade == 'C+' or term_data.mean_grade == 'C' or term_data.mean_grade == 'C-' %}badge-warning
+                                    {% else %}badge-error{% endif %}">
+                                    {{ term_data.mean_grade }}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm text-white/60">Position</span>
+                            <span class="ml-2 text-xl font-bold text-white">{{ term_data.position|default:"-" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Table -->
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="text-white/60 text-sm">
+                                <th class="px-4 py-2 text-left">Subject</th>
+                                <th class="px-4 py-2 text-left">Code</th>
+                                <th class="px-4 py-2 text-center">Marks</th>
+                                <th class="px-4 py-2 text-center">Grade</th>
+                                <th class="px-4 py-2 text-center">Points</th>
+                                <th class="px-4 py-2 text-left">Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in term_data.results %}
+                            <tr class="border-t border-white/10 hover:bg-white/5">
+                                <td class="px-4 py-3">
+                                    <span class="text-white font-medium">{{ result.subject.name }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-white">{{ result.subject.code }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="text-white font-bold {% if result.marks >= 80 %}text-green-400{% elif result.marks >= 60 %}text-blue-400{% elif result.marks >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                                        {{ result.marks }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge 
+                                        {% if result.grade == 'A' or result.grade == 'A-' %}badge-success
+                                        {% elif result.grade == 'B+' or result.grade == 'B' or result.grade == 'B-' %}badge-info
+                                        {% elif result.grade == 'C+' or result.grade == 'C' or result.grade == 'C-' %}badge-warning
+                                        {% else %}badge-error{% endif %}">
+                                        {{ result.grade }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center text-white">{{ result.points }}</td>
+                                <td class="px-4 py-3 text-white/80">{{ result.remarks|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="border-t-2 border-white/20">
+                            <tr class="font-medium">
+                                <td colspan="2" class="px-4 py-3 text-white">Summary</td>
+                                <td class="px-4 py-3 text-center text-white font-bold">{{ term_data.total_marks }}</td>
+                                <td class="px-4 py-3 text-center text-white">{{ term_data.mean_grade }}</td>
+                                <td class="px-4 py-3 text-center text-white">{{ term_data.total_points }}</td>
+                                <td class="px-4 py-3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <!-- Term Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="bg-white/5 rounded-lg p-3">
+                        <span class="text-sm text-white/60">Subject Performance</span>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-white">Best:</span>
+                            <span class="text-green-400">{{ term_data.best_subject }} ({{ term_data.best_mark }})</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-white">Weakest:</span>
+                            <span class="text-red-400">{{ term_data.worst_subject }} ({{ term_data.worst_mark }})</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-lg p-3">
+                        <span class="text-sm text-white/60">Grade Distribution</span>
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {% for grade, count in term_data.grade_distribution.items %}
+                                {% if count > 0 %}
+                                <span class="badge 
+                                    {% if grade == 'A' or grade == 'A-' %}badge-success
+                                    {% elif grade == 'B+' or grade == 'B' or grade == 'B-' %}badge-info
+                                    {% elif grade == 'C+' or grade == 'C' or grade == 'C-' %}badge-warning
+                                    {% else %}badge-error{% endif %}">
+                                    {{ grade }}: {{ count }}
+                                </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-lg p-3">
+                        <span class="text-sm text-white/60">Performance vs Class</span>
+                        <div class="space-y-1 mt-1">
+                            <div class="flex justify-between">
+                                <span class="text-white">Class Average:</span>
+                                <span class="text-white">{{ term_data.class_average|floatformat:1 }}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-white">Difference:</span>
+                                <span class="{% if term_data.average > term_data.class_average %}text-green-400{% else %}text-red-400{% endif %}">
+                                    {{ term_data.average|add:"-"|add:term_data.class_average|floatformat:1 }}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="glass-card p-12 text-center">
+            <i class="fas fa-chart-line text-5xl text-white/40 mb-4"></i>
+            <h3 class="text-xl font-semibold text-white mb-2">No Results Found</h3>
+            <p class="text-white/60">No academic results available for this student.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Subject Performance Analysis -->
+    {% if subject_summary %}
+    <div class="glass-card mt-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Subject Performance Summary</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for subject, data in subject_summary.items %}
+                <div class="bg-white/5 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-white font-medium">{{ subject }}</h4>
+                        <span class="badge 
+                            {% if data.average >= 70 %}badge-success
+                            {% elif data.average >= 50 %}badge-info
+                            {% elif data.average >= 40 %}badge-warning
+                            {% else %}badge-error{% endif %}">
+                            {{ data.average|floatformat:1 }}%
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-white/60">Best Score:</span>
+                            <span class="text-green-400">{{ data.best }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white/60">Latest Score:</span>
+                            <span class="text-blue-400">{{ data.latest }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white/60">Trend:</span>
+                            <span class="{% if data.trend == 'up' %}text-green-400{% elif data.trend == 'down' %}text-red-400{% else %}text-yellow-400{% endif %}">
+                                <i class="fas fa-arrow-{{ data.trend }} mr-1"></i>
+                                {{ data.trend|title }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mt-3">
+                        <div class="progress-bar" style="width: {{ data.average }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Performance Insights -->
+    {% if strengths or weaknesses %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <!-- Strengths -->
+        {% if strengths %}
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-star text-yellow-400 mr-2"></i>
+                    Strengths
+                </h3>
+            </div>
+            <div class="p-6">
+                <ul class="space-y-2">
+                    {% for strength in strengths %}
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-green-400 mt-1 mr-3"></i>
+                        <span class="text-white/80">{{ strength }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Areas for Improvement -->
+        {% if weaknesses %}
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                    Areas for Improvement
+                </h3>
+            </div>
+            <div class="p-6">
+                <ul class="space-y-2">
+                    {% for weakness in weaknesses %}
+                    <li class="flex items-start">
+                        <i class="fas fa-arrow-up text-yellow-400 mt-1 mr-3"></i>
+                        <span class="text-white/80">{{ weakness }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if recommendations %}
+    <div class="glass-card mt-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white flex items-center">
+                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                Recommendations
+            </h3>
+        </div>
+        <div class="p-6">
+            <ul class="space-y-2">
+                {% for rec in recommendations %}
+                <li class="flex items-start">
+                    <i class="fas fa-chevron-right text-blue-400 mt-1 mr-3 text-sm"></i>
+                    <span class="text-white/80">{{ rec }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if terms|length > 1 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Performance Trend Chart
+    const ctx = document.getElementById('performanceTrend').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for term_key, term_data in terms.items %}'{{ term_key|truncatechars:10 }}',{% endfor %}],
+            datasets: [{
+                label: 'Average Score',
+                data: [{% for term_key, term_data in terms.items %}{{ term_data.average }},{% endfor %}],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: function(context) {
+                    const value = context.raw;
+                    if (value >= 80) return 'rgb(34, 197, 94)';
+                    if (value >= 60) return 'rgb(59, 130, 246)';
+                    if (value >= 50) return 'rgb(234, 179, 8)';
+                    return 'rgb(239, 68, 68)';
+                },
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Average: ${context.raw}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+
+<style>
+    /* Print styles for results */
+    @media print {
+        .glass-sidebar,
+        .glass-navbar,
+        .glass-button,
+        .no-print {
+            display: none !important;
+        }
+        
+        body {
+            background: white;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .glass-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            box-shadow: none;
+            page-break-inside: avoid;
+        }
+        
+        .text-white {
+            color: black !important;
+        }
+        
+        .text-white/60,
+        .text-white/80 {
+            color: #4b5563 !important;
+        }
+        
+        .badge {
+            border: 1px solid #e5e7eb;
+            background: #f3f4f6;
+            color: black !important;
+        }
+        
+        .bg-gradient-to-r {
+            background: #f3f4f6 !important;
+        }
+        
+        .progress {
+            background: #e5e7eb;
+        }
+        
+        .progress-bar {
+            background: #3b82f6 !important;
+        }
+    }
+</style>
+{% endblock %}
