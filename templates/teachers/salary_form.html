@@ -1,0 +1,421 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if salary %}Edit{% else %}Record{% endif %} Salary - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if salary %}Edit Salary{% else %}Record Teacher Salary{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" enctype="multipart/form-data" id="salaryForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Teacher Selection -->
+            <div class="mb-6">
+                <label for="{{ form.teacher.id_for_label }}" class="form-label">
+                    Teacher <span class="text-red-400">*</span>
+                </label>
+                <select name="{{ form.teacher.name }}" id="teacherSelect" class="glass-input select2" required>
+                    <option value="">Select Teacher</option>
+                    {% for teacher in form.teacher.field.queryset %}
+                    <option value="{{ teacher.id }}" 
+                            data-emp="{{ teacher.employee_number }}"
+                            {% if form.teacher.value == teacher.id %}selected{% endif %}>
+                        {{ teacher.get_full_name }} ({{ teacher.employee_number }}) - {{ teacher.specialization }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.teacher.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.teacher.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Period -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="{{ form.month.id_for_label }}" class="form-label">
+                        Month <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.month.name }}" id="month" class="glass-input" required>
+                        <option value="">Select Month</option>
+                        {% for value, label in form.month.field.choices %}
+                        <option value="{{ value }}" {% if form.month.value == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.month.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.month.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.year.id_for_label }}" class="form-label">
+                        Year <span class="text-red-400">*</span>
+                    </label>
+                    <input type="number" name="{{ form.year.name }}" id="year" 
+                           value="{{ form.year.value|default:'' }}" 
+                           class="glass-input" min="2020" max="2030" required>
+                    {% if form.year.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.year.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Salary Components -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Salary Components</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.basic_salary.id_for_label }}" class="form-label">
+                            Basic Salary <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.basic_salary.name }}" id="basicSalary" 
+                                   value="{{ form.basic_salary.value|default:'' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        {% if form.basic_salary.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.basic_salary.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.house_allowance.id_for_label }}" class="form-label">
+                            House Allowance
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.house_allowance.name }}" id="houseAllowance" 
+                                   value="{{ form.house_allowance.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.transport_allowance.id_for_label }}" class="form-label">
+                            Transport Allowance
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.transport_allowance.name }}" id="transportAllowance" 
+                                   value="{{ form.transport_allowance.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.medical_allowance.id_for_label }}" class="form-label">
+                            Medical Allowance
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.medical_allowance.name }}" id="medicalAllowance" 
+                                   value="{{ form.medical_allowance.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.other_allowances.id_for_label }}" class="form-label">
+                            Other Allowances
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.other_allowances.name }}" id="otherAllowances" 
+                                   value="{{ form.other_allowances.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deductions -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Deductions</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.tax.id_for_label }}" class="form-label">
+                            PAYE (Tax)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.tax.name }}" id="tax" 
+                                   value="{{ form.tax.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.nhif.id_for_label }}" class="form-label">
+                            NHIF
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.nhif.name }}" id="nhif" 
+                                   value="{{ form.nhif.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.nssf.id_for_label }}" class="form-label">
+                            NSSF
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.nssf.name }}" id="nssf" 
+                                   value="{{ form.nssf.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.loan_deduction.id_for_label }}" class="form-label">
+                            Loan Deduction
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.loan_deduction.name }}" id="loanDeduction" 
+                                   value="{{ form.loan_deduction.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.other_deductions.id_for_label }}" class="form-label">
+                            Other Deductions
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.other_deductions.name }}" id="otherDeductions" 
+                                   value="{{ form.other_deductions.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Net Salary Summary -->
+            <div class="mb-6 p-4 bg-green-500/10 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-white font-medium">Gross Salary:</span>
+                    <span class="text-xl font-bold text-blue-400" id="grossSalary">KSh 0.00</span>
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                    <span class="text-white font-medium">Total Deductions:</span>
+                    <span class="text-xl font-bold text-red-400" id="totalDeductions">KSh 0.00</span>
+                </div>
+                <div class="border-t border-white/20 my-3 pt-3 flex items-center justify-between">
+                    <span class="text-white font-bold text-lg">Net Salary:</span>
+                    <span class="text-2xl font-bold text-green-400" id="netSalary">KSh 0.00</span>
+                </div>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="{{ form.payment_date.id_for_label }}" class="form-label">
+                        Payment Date <span class="text-red-400">*</span>
+                    </label>
+                    <input type="date" name="{{ form.payment_date.name }}" id="paymentDate" 
+                           value="{{ form.payment_date.value|date:'Y-m-d'|default:'' }}" 
+                           class="glass-input" required>
+                    {% if form.payment_date.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.payment_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.payment_method.id_for_label }}" class="form-label">
+                        Payment Method <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.payment_method.name }}" id="paymentMethod" class="glass-input" required>
+                        <option value="">Select Method</option>
+                        {% for value, label in form.payment_method.field.choices %}
+                        <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.payment_method.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.payment_method.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Payslip Upload -->
+            <div class="mb-6">
+                <label for="{{ form.payslip.id_for_label }}" class="form-label">
+                    Payslip (PDF)
+                </label>
+                <input type="file" name="{{ form.payslip.name }}" id="payslip" 
+                       class="glass-input" accept=".pdf">
+                {% if salary and salary.payslip %}
+                <div class="mt-2 text-sm">
+                    Current: <a href="{{ salary.payslip.url }}" target="_blank" class="text-blue-400 hover:underline">View Payslip</a>
+                </div>
+                {% endif %}
+                {% if form.payslip.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.payslip.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'teachers:salary_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-green-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if salary %}Update{% else %}Record{% endif %} Salary
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include Select2 CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Search for a teacher...",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Salary calculation
+    const basicSalary = document.getElementById('basicSalary');
+    const houseAllowance = document.getElementById('houseAllowance');
+    const transportAllowance = document.getElementById('transportAllowance');
+    const medicalAllowance = document.getElementById('medicalAllowance');
+    const otherAllowances = document.getElementById('otherAllowances');
+    const tax = document.getElementById('tax');
+    const nhif = document.getElementById('nhif');
+    const nssf = document.getElementById('nssf');
+    const loanDeduction = document.getElementById('loanDeduction');
+    const otherDeductions = document.getElementById('otherDeductions');
+    
+    const grossSpan = document.getElementById('grossSalary');
+    const deductionsSpan = document.getElementById('totalDeductions');
+    const netSpan = document.getElementById('netSalary');
+
+    function calculateSalary() {
+        // Calculate gross
+        const basic = parseFloat(basicSalary.value) || 0;
+        const house = parseFloat(houseAllowance.value) || 0;
+        const transport = parseFloat(transportAllowance.value) || 0;
+        const medical = parseFloat(medicalAllowance.value) || 0;
+        const other = parseFloat(otherAllowances.value) || 0;
+        
+        const gross = basic + house + transport + medical + other;
+        grossSpan.textContent = 'KSh ' + gross.toFixed(2);
+
+        // Calculate deductions
+        const taxVal = parseFloat(tax.value) || 0;
+        const nhifVal = parseFloat(nhif.value) || 0;
+        const nssfVal = parseFloat(nssf.value) || 0;
+        const loanVal = parseFloat(loanDeduction.value) || 0;
+        const otherDedVal = parseFloat(otherDeductions.value) || 0;
+        
+        const deductions = taxVal + nhifVal + nssfVal + loanVal + otherDedVal;
+        deductionsSpan.textContent = 'KSh ' + deductions.toFixed(2);
+
+        // Calculate net
+        const net = gross - deductions;
+        netSpan.textContent = 'KSh ' + net.toFixed(2);
+    }
+
+    // Add event listeners
+    const inputs = [
+        basicSalary, houseAllowance, transportAllowance, medicalAllowance, otherAllowances,
+        tax, nhif, nssf, loanDeduction, otherDeductions
+    ];
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', calculateSalary);
+    });
+
+    // Set default year to current year
+    const yearInput = document.getElementById('year');
+    if (!yearInput.value) {
+        yearInput.value = new Date().getFullYear();
+    }
+
+    // Set default month to current month
+    const monthSelect = document.getElementById('month');
+    if (!monthSelect.value) {
+        monthSelect.value = new Date().getMonth() + 1;
+    }
+
+    // Set default payment date to today
+    const paymentDate = document.getElementById('paymentDate');
+    if (!paymentDate.value) {
+        const today = new Date().toISOString().split('T')[0];
+        paymentDate.value = today;
+    }
+
+    // Initialize calculation
+    calculateSalary();
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+    
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+        color: white;
+        line-height: 45px;
+    }
+</style>
+{% endblock %}

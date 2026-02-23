@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}M-Pesa Payment - Kenyan Schools System{% endblock %}
+
+{% block page_title %}M-Pesa Payment{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glass-card p-6 mb-6">
+        <div class="text-center mb-6">
+            <div class="w-20 h-20 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+                <i class="fas fa-mobile-alt text-green-400 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white">M-Pesa Payment</h2>
+            <p class="text-white/60">Pay school fees securely via M-Pesa</p>
+        </div>
+
+        <form method="post" id="mpesaForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Student Selection -->
+            <div class="mb-4">
+                <label for="{{ form.student.id_for_label }}" class="form-label">
+                    Student <span class="text-red-400">*</span>
+                </label>
+                <select name="{{ form.student.name }}" id="studentSelect" class="glass-input select2" required>
+                    <option value="">Select Student</option>
+                    {% for student in form.student.field.queryset %}
+                    <option value="{{ student.id }}" {% if form.student.value == student.id %}selected{% endif %}>
+                        {{ student.get_full_name }} ({{ student.admission_number }}) - Form {{ student.current_class }} {{ student.stream }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.student.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.student.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Outstanding Balance Display -->
+            <div id="balanceInfo" class="hidden mb-4 p-4 bg-yellow-500/10 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-white/80">Outstanding Balance:</span>
+                    <span class="text-xl font-bold text-yellow-400" id="outstandingBalance">KSh 0.00</span>
+                </div>
+            </div>
+
+            <!-- Invoice Selection (Optional) -->
+            <div class="mb-4">
+                <label for="{{ form.invoice.id_for_label }}" class="form-label">
+                    Invoice (Optional)
+                </label>
+                <select name="{{ form.invoice.name }}" id="invoiceSelect" class="glass-input select2">
+                    <option value="">Select Invoice (Optional)</option>
+                </select>
+                {% if form.invoice.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.invoice.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Amount -->
+            <div class="mb-4">
+                <label for="{{ form.amount.id_for_label }}" class="form-label">
+                    Amount <span class="text-red-400">*</span>
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-white/40">KSh</span>
+                    </div>
+                    <input type="number" name="{{ form.amount.name }}" id="amount" 
+                           value="{{ form.amount.value|default:'' }}" 
+                           class="glass-input pl-12" 
+                           step="10" min="10" max="150000" required>
+                </div>
+                {% if form.amount.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.amount.errors.0 }}</p>
+                {% endif %}
+                <p class="text-xs text-white/40 mt-1">Min: KSh 10, Max: KSh 150,000</p>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="mb-6">
+                <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                    M-Pesa Phone Number <span class="text-red-400">*</span>
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-phone-alt text-white/40"></i>
+                    </div>
+                    <input type="text" name="{{ form.phone_number.name }}" id="phoneNumber" 
+                           value="{{ form.phone_number.value|default:'' }}" 
+                           class="glass-input pl-10" 
+                           placeholder="254712345678"
+                           required>
+                </div>
+                {% if form.phone_number.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.phone_number.errors.0 }}</p>
+                {% endif %}
+                <p class="text-xs text-white/40 mt-1">Format: 254712345678 (no leading zero)</p>
+            </div>
+
+            <!-- Quick Amount Buttons -->
+            <div class="mb-6">
+                <label class="form-label">Quick Amounts</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button type="button" onclick="setAmount(1000)" class="glass-button text-sm py-2">KSh 1,000</button>
+                    <button type="button" onclick="setAmount(5000)" class="glass-button text-sm py-2">KSh 5,000</button>
+                    <button type="button" onclick="setAmount(10000)" class="glass-button text-sm py-2">KSh 10,000</button>
+                    <button type="button" onclick="setAmount(20000)" class="glass-button text-sm py-2">KSh 20,000</button>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="bg-blue-500/10 rounded-lg p-4 mb-6">
+                <h4 class="text-white font-medium mb-2 flex items-center">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    Payment Information
+                </h4>
+                <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                    <li>You will receive an STK push prompt on your phone</li>
+                    <li>Enter your M-Pesa PIN to complete the transaction</li>
+                    <li>Payment will reflect instantly after confirmation</li>
+                    <li>Transaction charges apply as per M-Pesa rates</li>
+                </ul>
+            </div>
+
+            <!-- Terms -->
+            <div class="flex items-center mb-6">
+                <input type="checkbox" id="terms" class="form-checkbox h-4 w-4 text-blue-600" required>
+                <label for="terms" class="ml-2 text-sm text-white/80">
+                    I agree to the <a href="#" class="text-blue-400 hover:underline">Terms and Conditions</a>
+                </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="glass-button w-full py-4 bg-green-600/50 text-lg" id="payBtn">
+                <i class="fas fa-lock mr-2"></i>Pay with M-Pesa
+            </button>
+        </form>
+    </div>
+
+    <!-- Security Notice -->
+    <div class="text-center text-xs text-white/40">
+        <i class="fas fa-shield-alt mr-1"></i>
+        Secured by Safaricom M-Pesa API. Your payment information is encrypted.
+    </div>
+</div>
+
+<!-- Payment Processing Modal -->
+<div id="processingModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6 text-center">
+        <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-400 mb-4"></div>
+        <h3 class="text-xl font-bold text-white mb-2">Processing Payment</h3>
+        <p class="text-white/60 mb-2">Please check your phone for the STK push prompt</p>
+        <p class="text-sm text-white/40">Transaction in progress...</p>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
+            <i class="fas fa-check-circle text-green-400 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">Payment Initiated!</h3>
+        <p class="text-white/60 mb-4">Check your phone to complete the transaction</p>
+        <div class="bg-white/5 rounded-lg p-4 mb-4 text-left">
+            <p class="text-sm text-white/80" id="successMessage"></p>
+        </div>
+        <button onclick="window.location.href='{% url 'finance:payment_list' %}'" class="glass-button w-full">
+            View Payments
+        </button>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div id="errorModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="glass-modal max-w-md w-full p-6 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+            <i class="fas fa-times-circle text-red-400 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-2">Payment Failed</h3>
+        <p class="text-white/60 mb-4" id="errorMessage"></p>
+        <button onclick="closeErrorModal()" class="glass-button w-full">Try Again</button>
+    </div>
+</div>
+
+<!-- Include Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Search...",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Student selection - load invoices
+    document.getElementById('studentSelect').addEventListener('change', function() {
+        const studentId = this.value;
+        const invoiceSelect = document.getElementById('invoiceSelect');
+        const balanceInfo = document.getElementById('balanceInfo');
+        
+        if (studentId) {
+            // Fetch student's outstanding balance and invoices
+            fetch(`/finance/api/student-balance/${studentId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('outstandingBalance').textContent = 
+                        'KSh ' + data.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    balanceInfo.classList.remove('hidden');
+                });
+            
+            // Fetch invoices
+            fetch(`/finance/api/student-invoices/${studentId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    invoiceSelect.innerHTML = '<option value="">Select Invoice (Optional)</option>';
+                    data.invoices.forEach(inv => {
+                        const option = document.createElement('option');
+                        option.value = inv.id;
+                        option.textContent = `${inv.number} - KSh ${inv.balance} (${inv.status})`;
+                        option.dataset.balance = inv.balance;
+                        invoiceSelect.appendChild(option);
+                    });
+                });
+        } else {
+            balanceInfo.classList.add('hidden');
+        }
+    });
+
+    // Invoice selection - set amount
+    document.getElementById('invoiceSelect').addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value && selected.dataset.balance) {
+            document.getElementById('amount').value = selected.dataset.balance;
+        }
+    });
+
+    // Quick amount buttons
+    function setAmount(amount) {
+        document.getElementById('amount').value = amount;
+    }
+
+    // Form submission
+    document.getElementById('mpesaForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate phone number
+        const phone = document.getElementById('phoneNumber').value;
+        if (!phone.match(/^254[0-9]{9}$/)) {
+            showError('Please enter a valid phone number in format 254712345678');
+            return;
+        }
+        
+        // Show processing modal
+        openProcessingModal();
+        
+        // Submit form via AJAX
+        const formData = new FormData(this);
+        
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            closeProcessingModal();
+            if (data.success) {
+                showSuccess(data.message);
+            } else {
+                showError(data.error || 'Payment failed. Please try again.');
+            }
+        })
+        .catch(error => {
+            closeProcessingModal();
+            showError('Network error. Please check your connection.');
+        });
+    });
+
+    // Modal functions
+    function openProcessingModal() {
+        document.getElementById('processingModal').classList.remove('hidden');
+        document.getElementById('processingModal').classList.add('flex');
+        document.getElementById('payBtn').disabled = true;
+    }
+
+    function closeProcessingModal() {
+        document.getElementById('processingModal').classList.add('hidden');
+        document.getElementById('processingModal').classList.remove('flex');
+        document.getElementById('payBtn').disabled = false;
+    }
+
+    function showSuccess(message) {
+        document.getElementById('successMessage').textContent = message;
+        document.getElementById('successModal').classList.remove('hidden');
+        document.getElementById('successModal').classList.add('flex');
+    }
+
+    function showError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorModal').classList.remove('hidden');
+        document.getElementById('errorModal').classList.add('flex');
+    }
+
+    function closeErrorModal() {
+        document.getElementById('errorModal').classList.add('hidden');
+        document.getElementById('errorModal').classList.remove('flex');
+    }
+
+    // Close modals when clicking outside
+    document.getElementById('successModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
+    
+    document.getElementById('errorModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+    
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+        color: white;
+        line-height: 45px;
+    }
+</style>
+{% endblock %}

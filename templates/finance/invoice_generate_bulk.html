@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Generate Invoices - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Bulk Generate Invoices{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Info Card -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-invoice text-blue-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-white">Bulk Invoice Generation</h3>
+                <p class="text-white/60 mt-1">Generate invoices for multiple students at once based on class, stream, or custom selection.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="glass-card p-6">
+        <form method="post" id="bulkInvoiceForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Academic Year and Term -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="{{ form.academic_year.id_for_label }}" class="form-label">
+                        Academic Year <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.academic_year.name }}" id="academicYear" class="glass-input" required>
+                        <option value="">Select Academic Year</option>
+                        {% for year in form.academic_year.field.queryset %}
+                        <option value="{{ year.id }}" {% if year.is_current %}selected{% endif %}>
+                            {{ year.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.academic_year.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.academic_year.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.term.id_for_label }}" class="form-label">
+                        Term <span class="text-red-400">*</span>
+                    </label>
+                    <select name="{{ form.term.name }}" id="term" class="glass-input" required>
+                        <option value="">Select Term</option>
+                        {% for value, label in form.term.field.choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.term.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.term.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Filter Options -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Filter Students</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.class_level.id_for_label }}" class="form-label">
+                            Class Level
+                        </label>
+                        <select name="{{ form.class_level.name }}" id="classLevel" class="glass-input">
+                            <option value="">All Classes</option>
+                            {% for value, label in form.class_level.field.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.class_level.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.class_level.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.stream.id_for_label }}" class="form-label">
+                            Stream
+                        </label>
+                        <select name="{{ form.stream.name }}" id="stream" class="glass-input">
+                            <option value="">All Streams</option>
+                            {% for value, label in form.stream.field.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.stream.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.stream.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-blue-500/10 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-medium">Student Count Preview</p>
+                            <p class="text-sm text-white/60" id="studentCount">Select filters to see count</p>
+                        </div>
+                        <button type="button" onclick="previewStudents()" class="glass-button">
+                            <i class="fas fa-eye mr-2"></i>Preview Students
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Due Date -->
+            <div class="mb-6">
+                <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                    Due Date <span class="text-red-400">*</span>
+                </label>
+                <input type="date" name="{{ form.due_date.name }}" id="dueDate" 
+                       value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}" 
+                       class="glass-input" required>
+                {% if form.due_date.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.due_date.errors.0 }}</p>
+                {% endif %}
+                <p class="text-xs text-white/40 mt-1">All invoices will have this due date</p>
+            </div>
+
+            <!-- Additional Options -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Additional Options</h3>
+                
+                <div class="space-y-3">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_notifications" class="form-checkbox h-5 w-5 text-blue-600" checked>
+                        <span class="ml-2 text-white">Send email/SMS notifications to parents</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="include_late_fees" class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">Include late payment penalties from previous terms</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="apply_discounts" class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">Apply available discounts (sibling discount, early payment)</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="override_existing" class="form-checkbox h-5 w-5 text-blue-600">
+                        <span class="ml-2 text-white">Override existing invoices for this period</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg p-6 mb-6">
+                <h4 class="text-white font-medium mb-4">Generation Summary</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-white/60">Students to Invoice</p>
+                        <p class="text-2xl font-bold text-white" id="summaryCount">0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-white/60">Estimated Total</p>
+                        <p class="text-2xl font-bold text-green-400" id="summaryTotal">KSh 0</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-white/60">Due Date</p>
+                        <p class="text-lg font-semibold text-white" id="summaryDueDate">Not set</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mt-1 mr-3"></i>
+                    <div>
+                        <h4 class="text-white font-medium">Important Note</h4>
+                        <p class="text-sm text-yellow-400">This will generate invoices for ALL students matching the selected filters. Invoices that already exist will be skipped unless "Override existing" is checked.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:invoice_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="button" onclick="previewGeneration()" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-eye mr-2"></i>Preview
+                </button>
+                <button type="submit" class="glass-button bg-green-600/50" id="generateBtn">
+                    <i class="fas fa-file-invoice mr-2"></i>Generate Invoices
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glass-modal max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Preview Students to Invoice</h3>
+                <button onclick="closePreviewModal()" class="text-white/60 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4 p-3 bg-blue-500/10 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <span class="text-white">Total Students: <span id="previewTotalCount">0</span></span>
+                    <span class="text-white">Estimated Total: <span id="previewTotalAmount" class="text-green-400">KSh 0</span></span>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Admission No.</th>
+                            <th class="px-4 py-2 text-left">Student Name</th>
+                            <th class="px-4 py-2 text-left">Class</th>
+                            <th class="px-4 py-2 text-right">Fee Amount</th>
+                            <th class="px-4 py-2 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewTableBody">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="closePreviewModal()" class="glass-button">Close</button>
+                <button onclick="confirmGeneration()" class="glass-button bg-green-600/50">
+                    <i class="fas fa-check-circle mr-2"></i>Confirm & Generate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glass-modal max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-white mb-4 text-center">Generating Invoices</h3>
+            
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-white/60 mb-2">
+                    <span>Progress</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress h-3">
+                    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <p class="text-white/80 text-sm text-center" id="progressStatus">Initializing...</p>
+            <p class="text-xs text-white/40 text-center mt-4" id="progressDetail"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update preview based on filters
+    const academicYear = document.getElementById('academicYear');
+    const term = document.getElementById('term');
+    const classLevel = document.getElementById('classLevel');
+    const stream = document.getElementById('stream');
+    const dueDate = document.getElementById('dueDate');
+    
+    const summaryCount = document.getElementById('summaryCount');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryDueDate = document.getElementById('summaryDueDate');
+    const studentCount = document.getElementById('studentCount');
+
+    function updatePreview() {
+        // Update due date summary
+        if (dueDate.value) {
+            const date = new Date(dueDate.value);
+            summaryDueDate.textContent = date.toLocaleDateString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            });
+        } else {
+            summaryDueDate.textContent = 'Not set';
+        }
+
+        // Fetch student count
+        if (academicYear.value && term.value) {
+            fetchStudentCount();
+        }
+    }
+
+    function fetchStudentCount() {
+        const params = new URLSearchParams({
+            academic_year: academicYear.value,
+            term: term.value,
+            class_level: classLevel.value || '',
+            stream: stream.value || ''
+        });
+
+        fetch(`/finance/api/student-count/?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                studentCount.textContent = `${data.count} students found`;
+                summaryCount.textContent = data.count;
+                
+                // Fetch fee amount for this class/term
+                fetch(`/finance/api/fee-amount/?academic_year=${academicYear.value}&term=${term.value}&class_level=${classLevel.value || '1'}`)
+                    .then(res => res.json())
+                    .then(feeData => {
+                        const total = data.count * (feeData.amount || 0);
+                        summaryTotal.textContent = 'KSh ' + total.toLocaleString();
+                    });
+            });
+    }
+
+    // Preview students
+    function previewStudents() {
+        if (!academicYear.value || !term.value) {
+            alert('Please select academic year and term first');
+            return;
+        }
+
+        const params = new URLSearchParams({
+            academic_year: academicYear.value,
+            term: term.value,
+            class_level: classLevel.value || '',
+            stream: stream.value || ''
+        });
+
+        fetch(`/finance/api/student-preview/?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('previewTableBody');
+                tbody.innerHTML = '';
+                
+                data.students.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-t border-white/10 hover:bg-white/5';
+                    row.innerHTML = `
+                        <td class="px-4 py-3 text-white">${student.admission_number}</td>
+                        <td class="px-4 py-3 text-white">${student.name}</td>
+                        <td class="px-4 py-3 text-white">Form ${student.class} ${student.stream}</td>
+                        <td class="px-4 py-3 text-right text-green-400 font-bold">KSh ${student.fee_amount}</td>
+                        <td class="px-4 py-3">
+                            <span class="badge ${student.has_invoice ? 'badge-info' : 'badge-success'}">
+                                ${student.has_invoice ? 'Exists' : 'New'}
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('previewTotalCount').textContent = data.total;
+                document.getElementById('previewTotalAmount').textContent = 'KSh ' + data.total_amount.toLocaleString();
+                
+                openPreviewModal();
+            });
+    }
+
+    // Preview generation (show modal)
+    function previewGeneration() {
+        if (!academicYear.value || !term.value || !dueDate.value) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        previewStudents();
+    }
+
+    // Confirm and generate
+    function confirmGeneration() {
+        closePreviewModal();
+        startGeneration();
+    }
+
+    // Start generation process
+    function startGeneration() {
+        openProgressModal();
+        
+        const formData = new FormData(document.getElementById('bulkInvoiceForm'));
+        
+        // Simulate progress (replace with actual AJAX in production)
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 5;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressPercent').textContent = progress + '%';
+            
+            if (progress <= 30) {
+                document.getElementById('progressStatus').textContent = 'Fetching student data...';
+            } else if (progress <= 60) {
+                document.getElementById('progressStatus').textContent = 'Generating invoices...';
+                document.getElementById('progressDetail').textContent = `Created ${Math.floor(progress/10)} invoices`;
+            } else if (progress <= 90) {
+                document.getElementById('progressStatus').textContent = 'Applying discounts and calculations...';
+            } else if (progress < 100) {
+                document.getElementById('progressStatus').textContent = 'Finalizing...';
+            }
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                document.getElementById('progressStatus').textContent = 'Complete!';
+                document.getElementById('progressDetail').textContent = 'All invoices generated successfully';
+                
+                setTimeout(() => {
+                    closeProgressModal();
+                    window.location.href = "{% url 'finance:invoice_list' %}";
+                }, 1500);
+            }
+        }, 200);
+
+        // Actual form submission (uncomment in production)
+        /*
+        fetch('/finance/invoices/generate-bulk/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Handle response
+        });
+        */
+    }
+
+    // Modal functions
+    function openPreviewModal() {
+        document.getElementById('previewModal').classList.remove('hidden');
+        document.getElementById('previewModal').classList.add('flex');
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').classList.add('hidden');
+        document.getElementById('previewModal').classList.remove('flex');
+    }
+
+    function openProgressModal() {
+        document.getElementById('progressModal').classList.remove('hidden');
+        document.getElementById('progressModal').classList.add('flex');
+        document.getElementById('generateBtn').disabled = true;
+    }
+
+    function closeProgressModal() {
+        document.getElementById('progressModal').classList.add('hidden');
+        document.getElementById('progressModal').classList.remove('flex');
+        document.getElementById('generateBtn').disabled = false;
+    }
+
+    // Set default due date (30 days from now)
+    if (!dueDate.value) {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        dueDate.value = date.toISOString().split('T')[0];
+    }
+
+    // Event listeners
+    academicYear.addEventListener('change', updatePreview);
+    term.addEventListener('change', updatePreview);
+    classLevel.addEventListener('change', updatePreview);
+    stream.addEventListener('change', updatePreview);
+    dueDate.addEventListener('change', updatePreview);
+
+    // Initialize preview
+    updatePreview();
+
+    // Close modals when clicking outside
+    document.getElementById('previewModal').addEventListener('click', function(e) {
+        if (e.target === this) closePreviewModal();
+    });
+    
+    document.getElementById('progressModal').addEventListener('click', function(e) {
+        if (e.target === this) closeProgressModal();
+    });
+</script>
+
+<style>
+    /* Modal animations */
+    .modal {
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .glass-modal {
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}

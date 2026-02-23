@@ -1,11 +1,14 @@
 """
 Django settings for config project.
 Enhanced with Jazzmin (AdminLTE 3) for a beautiful admin interface.
+Production-ready configuration for Railway deployment.
 """
 
 from pathlib import Path
 import os
+import sys
 from decouple import config
+import dj_database_url  # Added for Railway database URL parsing
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,9 +17,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)  # Default to False for production
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+# Railway provides the PORT environment variable
+PORT = config('PORT', default='8000')
+
+# ALLOWED_HOSTS configuration for Railway
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,.up.railway.app').split(',')
+
+# CSRF Trusted Origins for Railway
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', 
+                              default='http://localhost:8000,http://127.0.0.1:8000,https://*.up.railway.app').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -51,7 +62,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Must be after SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -86,12 +97,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'  # Added for Channels
 
-# Database
+# Database configuration for Railway - Uses DATABASE_URL from environment
+# https://docs.railway.com/guides/django#database-configuration
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 # Custom user model
@@ -146,7 +159,7 @@ SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-# Security settings (enable in production)
+# Security settings - automatically enabled in production (when DEBUG=False)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -157,16 +170,16 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Email configuration (update with your settings)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
-# For production:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = config('EMAIL_HOST')
-# EMAIL_PORT = config('EMAIL_PORT', cast=int)
-# EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=True)
-# EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='webmaster@localhost')
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -240,7 +253,6 @@ JAZZMIN_SETTINGS = {
     "copyright": "Kenyan Schools System Ltd",
     
     # List of model admins to search from the search bar, search bar omitted if excluded
-    # If you want to use a single search field you don't need to use a list, you can use a simple string 
     "search_model": ["accounts.User", "students.Student", "teachers.Teacher"],
     
     # Field name on user model that contains avatar ImageField/URLField/Charfield or a callable that receives the user
@@ -304,8 +316,7 @@ JAZZMIN_SETTINGS = {
         }]
     },
     
-    # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.13.0,5.12.0,5.11.2,5.11.1,5.10.0,5.9.0,5.8.2,5.8.1,5.7.2,5.7.1,5.7.0,5.6.3,5.5.0,5.4.2
-    # for the full list of 5.13.0 free icon classes
+    # Custom icons for side menu apps/models
     "icons": {
         "accounts": "fas fa-users-cog",
         "accounts.User": "fas fa-user",
@@ -379,25 +390,18 @@ JAZZMIN_SETTINGS = {
     # Whether to link font from fonts.googleapis.com (use custom_css to supply font otherwise)
     "use_google_fonts_cdn": True,
     # Whether to show the UI customizer on the sidebar
-    "show_ui_builder": True,  # Set to False in production
+    "show_ui_builder": False,  # Set to False in production
     
     ###############
     # Change view #
     ###############
-    # Render out the change view as a single form, or in tabs, current options are
-    # - single
-    # - horizontal_tabs
-    # - vertical_tabs
-    # - collapsible
-    # - carousel
+    # Render out the change view as a single form, or in tabs
     "changeform_format": "horizontal_tabs",
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {
         "accounts.user": "collapsible",
         "auth.group": "vertical_tabs",
     },
-    # Add a language dropdown into the admin
-    # "language_chooser": True,
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -437,54 +441,56 @@ JAZZMIN_UI_TWEAKS = {
 # =============================================================================
 
 # Channel layers for WebSocket communication
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],  # Redis default host and port
-            "capacity": 1500,  # Default capacity for channels
-            "expiry": 60,  # Message expiry in seconds
-        },
-    },
-}
+# Uses Redis from Railway environment variable
+REDIS_URL = config('REDIS_URL', default=None)
 
-# If Redis is not available, use in-memory channel layer for development
-# Uncomment this for development without Redis
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
-#     },
-# }
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [REDIS_URL],
+                "capacity": 1500,
+                "expiry": 60,
+            },
+        },
+    }
+else:
+    # Fallback to in-memory channel layer for development
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 # WebSocket specific settings
-WEBSOCKET_TIMEOUT = 60  # WebSocket connection timeout in seconds
-WEBSOCKET_MAX_SIZE = 1024 * 1024  # Max WebSocket message size (1MB)
+WEBSOCKET_TIMEOUT = 60
+WEBSOCKET_MAX_SIZE = 1024 * 1024  # 1MB
 
 # =============================================================================
 # CACHE CONFIGURATION (Optional - for better performance)
 # =============================================================================
 
-# Redis cache configuration (optional, uncomment if needed)
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': 'redis://127.0.0.1:6379/1',
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#         }
-#     }
-# }
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
 
 # =============================================================================
 # NOTIFICATION SETTINGS
 # =============================================================================
 
-# Notification settings
 NOTIFICATION_SETTINGS = {
-    'PAGE_SIZE': 20,  # Number of notifications per page
+    'PAGE_SIZE': 20,
     'MAX_TITLE_LENGTH': 200,
     'MAX_MESSAGE_LENGTH': 500,
-    'CLEANUP_DAYS': 30,  # Delete read notifications after 30 days
+    'CLEANUP_DAYS': 30,
 }
 
 # =============================================================================
@@ -492,7 +498,7 @@ NOTIFICATION_SETTINGS = {
 # =============================================================================
 
 MESSAGING_SETTINGS = {
-    'MAX_ATTACHMENT_SIZE': 10 * 1024 * 1024,  # 10MB max attachment size
+    'MAX_ATTACHMENT_SIZE': 10 * 1024 * 1024,  # 10MB
     'ALLOWED_ATTACHMENT_TYPES': [
         'image/jpeg',
         'image/png',
@@ -503,8 +509,8 @@ MESSAGING_SETTINGS = {
         'text/plain',
     ],
     'MAX_MESSAGE_LENGTH': 5000,
-    'TYPING_TIMEOUT': 3,  # Seconds before typing indicator disappears
-    'MESSAGE_PAGE_SIZE': 50,  # Messages per page in conversation
+    'TYPING_TIMEOUT': 3,
+    'MESSAGE_PAGE_SIZE': 50,
 }
 
 # =============================================================================
@@ -514,9 +520,9 @@ MESSAGING_SETTINGS = {
 REALTIME_SETTINGS = {
     'ENABLE_TYPING_INDICATORS': True,
     'ENABLE_READ_RECEIPTS': True,
-    'ENABLE_PRESENCE': True,  # Online/offline status
-    'PRESENCE_TIMEOUT': 60,  # Seconds before user is marked offline
-    'RECONNECT_DELAY': 3,  # Seconds to wait before reconnecting
+    'ENABLE_PRESENCE': True,
+    'PRESENCE_TIMEOUT': 60,
+    'RECONNECT_DELAY': 3,
 }
 
 # =============================================================================
@@ -546,11 +552,6 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'django.log',
             'formatter': 'verbose',
         },
-        'websocket_file': {
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'websocket.log',
-            'formatter': 'verbose',
-        },
     },
     'loggers': {
         'django': {
@@ -558,10 +559,6 @@ LOGGING = {
             'level': 'INFO',
         },
         'channels': {
-            'handlers': ['console', 'websocket_file'],
-            'level': 'INFO',
-        },
-        'messaging': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
         },
@@ -574,7 +571,7 @@ if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
 
 # =============================================================================
-# CORS SETTINGS (if needed for future mobile app)
+# CORS SETTINGS
 # =============================================================================
 
 CORS_ALLOWED_ORIGINS = [
@@ -582,16 +579,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
+# Add Railway domain to CORS if in production
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS.append("https://*.up.railway.app")
+
 CORS_ALLOW_CREDENTIALS = True
 
 # =============================================================================
-# CSRF TRUSTED ORIGINS
+# CSRF TRUSTED ORIGINS (Already set at top)
 # =============================================================================
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
 
 # =============================================================================
 # SECURITY HEADERS
@@ -617,6 +613,24 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+# =============================================================================
+# RAILWAY SPECIFIC SETTINGS
+# =============================================================================
+
+# Check if running on Railway (presence of RAILWAY_ENVIRONMENT variable)
+IS_RAILWAY = config('RAILWAY_ENVIRONMENT', default=None) is not None
+
+if IS_RAILWAY:
+    # Ensure static files are collected
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+    # Database connections are managed by Railway
+    # DATABASE_URL is already used above
+    
+    # Media files - Consider using cloud storage in production
+    # MEDIA_URL = 'https://your-cloud-storage.com/media/'
+    pass
 
 # =============================================================================
 # SILENCED SYSTEM CHECKS

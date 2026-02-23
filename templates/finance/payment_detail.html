@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment {{ payment.transaction_id }} - Details{% endblock %}
+
+{% block page_title %}Payment Details{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center space-x-3 mb-2">
+                    <h2 class="text-2xl font-bold text-white">Payment Receipt</h2>
+                    <span class="badge badge-success">{{ payment.get_payment_status_display }}</span>
+                </div>
+                <p class="text-white/60">Transaction ID: {{ payment.transaction_id }}</p>
+            </div>
+            <div class="flex space-x-2">
+                <a href="{% url 'finance:payment_list' %}" class="glass-button">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </a>
+                <button onclick="window.print()" class="glass-button">
+                    <i class="fas fa-print mr-2"></i>Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column - Payment Details -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Receipt Card -->
+            <div class="glass-card p-6">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-white">Kenyan Schools System</h3>
+                    <p class="text-white/60">Official Payment Receipt</p>
+                </div>
+                
+                <div class="border-t border-white/20 pt-4">
+                    <dl class="space-y-4">
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Receipt Number:</dt>
+                            <dd class="text-white font-mono font-bold">{{ payment.receipt_number|default:"N/A" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Transaction ID:</dt>
+                            <dd class="text-white font-mono">{{ payment.transaction_id }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Date & Time:</dt>
+                            <dd class="text-white">{{ payment.payment_date|date:"l, d M Y H:i" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Payment Method:</dt>
+                            <dd class="text-white">
+                                <span class="badge badge-info">{{ payment.get_payment_method_display }}</span>
+                            </dd>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold">
+                            <dt class="text-white">Amount Paid:</dt>
+                            <dd class="text-green-400">KSh {{ payment.amount|floatformat:2 }}</dd>
+                        </div>
+                    </dl>
+                </div>
+                
+                {% if payment.mpesa_code %}
+                <div class="mt-4 p-3 bg-green-500/10 rounded-lg">
+                    <p class="text-sm text-green-400">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        M-Pesa Confirmation Code: {{ payment.mpesa_code }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Student Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Student Information</h3>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <img src="{{ payment.student.user.get_profile_picture }}" alt="" class="h-16 w-16 rounded-full object-cover border-2 border-white mr-4">
+                        <div>
+                            <h4 class="text-xl font-bold text-white">{{ payment.student.get_full_name }}</h4>
+                            <p class="text-white/60">Admission: {{ payment.student.admission_number }}</p>
+                            <p class="text-white/60">Class: Form {{ payment.student.current_class }} {{ payment.student.stream }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Information -->
+            {% if payment.invoice %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Invoice Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Invoice Number:</dt>
+                            <dd class="text-white">{{ payment.invoice.invoice_number }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Invoice Total:</dt>
+                            <dd class="text-white">KSh {{ payment.invoice.total_amount|floatformat:2 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-white/60">Outstanding Balance:</dt>
+                            <dd class="{% if payment.invoice.balance > 0 %}text-yellow-400{% else %}text-green-400{% endif %}">
+                                KSh {{ payment.invoice.balance|floatformat:2 }}
+                            </dd>
+                        </div>
+                        <div class="mt-4">
+                            <a href="{% url 'finance:invoice_detail' payment.invoice.id %}" class="glass-button w-full">
+                                View Invoice Details
+                            </a>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Meta & Actions -->
+        <div class="space-y-6">
+            <!-- Payment Status -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Payment Status</h3>
+                </div>
+                <div class="p-6">
+                    <div class="text-center">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/20 mb-3">
+                            <i class="fas fa-check-circle text-green-400 text-3xl"></i>
+                        </div>
+                        <p class="text-lg font-bold text-white">{{ payment.get_payment_status_display }}</p>
+                        <p class="text-sm text-white/60 mt-2">Completed on {{ payment.payment_date|date:"d M Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reference Information -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Reference Information</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        {% if payment.reference_number %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Reference No:</dt>
+                            <dd class="text-sm text-white">{{ payment.reference_number }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.mpesa_code %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">M-Pesa Code:</dt>
+                            <dd class="text-sm text-white">{{ payment.mpesa_code }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.cheque_number %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Cheque No:</dt>
+                            <dd class="text-sm text-white">{{ payment.cheque_number }}</dd>
+                        </div>
+                        {% endif %}
+                        {% if payment.bank_name %}
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Bank:</dt>
+                            <dd class="text-sm text-white">{{ payment.bank_name }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Metadata</h3>
+                </div>
+                <div class="p-6">
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Received By:</dt>
+                            <dd class="text-sm text-white">{{ payment.received_by.get_full_name|default:"System" }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-sm text-white/60">Recorded At:</dt>
+                            <dd class="text-sm text-white">{{ payment.created_at|date:"d M Y H:i" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if payment.notes %}
+            <div class="glass-card">
+                <div class="border-b border-white/20 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-white">Notes</h3>
+                </div>
+                <div class="p-6">
+                    <p class="text-white/80">{{ payment.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style media="print">
+    @page {
+        size: A4;
+        margin: 1cm;
+    }
+    
+    body {
+        background: white;
+        padding: 20px;
+    }
+    
+    .glass-sidebar,
+    .glass-navbar,
+    .glass-button,
+    .no-print {
+        display: none !important;
+    }
+    
+    .glass-card {
+        background: white;
+        border: 1px solid #ddd;
+        box-shadow: none;
+        margin-bottom: 20px;
+    }
+    
+    .text-white {
+        color: black !important;
+    }
+    
+    .badge {
+        border: 1px solid #ddd;
+        background: #f5f5f5;
+        color: black !important;
+    }
+</style>
+{% endblock %}

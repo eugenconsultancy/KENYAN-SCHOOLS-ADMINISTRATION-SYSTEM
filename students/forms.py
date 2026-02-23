@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from .models import Student, Parent, StudentDocument, Club, Sport, StudentNote
 from academics.models import Subject
 from accounts.models import User
@@ -19,7 +20,7 @@ class StudentForm(forms.ModelForm):
     class Meta:
         model = Student
         fields = '__all__'
-        exclude = ['user', 'created_by', 'created_at', 'updated_at', 'subjects']  # Added 'subjects' to exclude
+        exclude = ['user', 'created_by', 'created_at', 'updated_at', 'subjects']
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'glass-input'}),
             'medical_conditions': forms.Textarea(attrs={'rows': 3, 'class': 'glass-input'}),
@@ -245,7 +246,6 @@ class StudentForm(forms.ModelForm):
         for field in required_fields:
             if field not in cleaned_data or not cleaned_data.get(field):
                 print(f"  ✗ Missing required field: {field}")
-                # Don't add error here as individual field clean methods already handle it
         
         return cleaned_data
     
@@ -277,6 +277,11 @@ class StudentForm(forms.ModelForm):
             if not password:
                 raise ValidationError('Password is required for new students.')
             
+            # Check if user with this username already exists
+            username = self.cleaned_data['username']
+            if User.objects.filter(username=username).exists():
+                raise ValidationError(f'User with username "{username}" already exists.')
+            
             user = User.objects.create_user(
                 username=self.cleaned_data['username'],
                 email=self.cleaned_data['email'],
@@ -287,21 +292,57 @@ class StudentForm(forms.ModelForm):
             )
             print(f"  User created: {user.username} (ID: {user.id})")
         
-        # Save student
-        student = super().save(commit=False)
-        student.user = user
+        # Check if student profile already exists for this user
+        from students.models import Student
+        existing_student = None
+        try:
+            existing_student = Student.objects.get(user=user)
+            print(f"  WARNING: Student profile already exists for user {user.id} (ID: {existing_student.id})")
+        except Student.DoesNotExist:
+            print(f"  No existing student profile found for user {user.id}")
+            existing_student = None
         
-        if self.request and hasattr(self.request, 'user'):
-            student.created_by = self.request.user
-            print(f"  Created by: {self.request.user.username}")
-        
-        if commit:
-            student.save()
-            print(f"  Student saved with ID: {student.id}")
-            print(f"  Admission number: {student.admission_number}")
-        
-        print("="*60)
-        return student
+        if existing_student:
+            # Update existing student with form data
+            print("  Updating existing student profile")
+            for field, value in self.cleaned_data.items():
+                if field not in ['username', 'email', 'first_name', 'last_name', 'password', 'subjects']:
+                    if hasattr(existing_student, field):
+                        setattr(existing_student, field, value)
+            
+            if self.request and hasattr(self.request, 'user'):
+                existing_student.created_by = self.request.user
+            
+            if commit:
+                existing_student.save()
+                print(f"  Existing student updated with ID: {existing_student.id}")
+                print(f"  Admission number: {existing_student.admission_number}")
+            
+            print("="*60)
+            return existing_student
+        else:
+            # Save new student
+            student = super().save(commit=False)
+            student.user = user
+            
+            if self.request and hasattr(self.request, 'user'):
+                student.created_by = self.request.user
+                print(f"  Created by: {self.request.user.username}")
+            
+            if commit:
+                try:
+                    student.save()
+                    print(f"  Student saved with ID: {student.id}")
+                    print(f"  Admission number: {student.admission_number}")
+                except IntegrityError as e:
+                    print(f"  IntegrityError: {e}")
+                    # Another thread might have created the profile
+                    from students.models import Student
+                    student = Student.objects.get(user=user)
+                    print(f"  Retrieved existing student with ID: {student.id}")
+            
+            print("="*60)
+            return student
 
 class StudentSearchForm(forms.Form):
     """Form for searching students"""

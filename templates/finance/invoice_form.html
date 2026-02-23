@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if invoice %}Edit{% else %}Create{% endif %} Invoice - Kenyan Schools System{% endblock %}
+
+{% block page_title %}{% if invoice %}Edit Invoice{% else %}Create New Invoice{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="glass-card p-6">
+        <form method="post" id="invoiceForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.student.id_for_label }}" class="form-label">
+                            Student <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.student.name }}" id="studentSelect" class="glass-input select2" required>
+                            <option value="">Select Student</option>
+                            {% for student in form.student.field.queryset %}
+                            <option value="{{ student.id }}" 
+                                    data-class="{{ student.current_class }}"
+                                    data-stream="{{ student.stream }}"
+                                    {% if form.student.value == student.id %}selected{% endif %}>
+                                {{ student.get_full_name }} ({{ student.admission_number }}) - Form {{ student.current_class }} {{ student.stream }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.student.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.student.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.fee_structure.id_for_label }}" class="form-label">
+                            Fee Structure <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.fee_structure.name }}" id="feeStructureSelect" class="glass-input" required>
+                            <option value="">Select Fee Structure</option>
+                            {% for fs in form.fee_structure.field.queryset %}
+                            <option value="{{ fs.id }}" 
+                                    data-total="{{ fs.get_total_fee }}"
+                                    data-term="{{ fs.term }}"
+                                    {% if form.fee_structure.value == fs.id %}selected{% endif %}>
+                                {{ fs.name }} - KSh {{ fs.get_total_fee|floatformat:2 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.fee_structure.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.fee_structure.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fee Structure Preview -->
+            <div id="feePreview" class="hidden mb-6 p-4 bg-blue-500/10 rounded-lg">
+                <h4 class="text-white font-medium mb-3">Fee Breakdown</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm" id="feeBreakdown">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Invoice Details -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Invoice Details</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                            Due Date <span class="text-red-400">*</span>
+                        </label>
+                        <input type="date" name="{{ form.due_date.name }}" id="dueDate" 
+                               value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}" 
+                               class="glass-input" required>
+                        {% if form.due_date.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.due_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                            Status
+                        </label>
+                        <select name="{{ form.status.name }}" id="status" class="glass-input">
+                            {% for value, label in form.status.field.choices %}
+                            <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.status.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amounts -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Amounts</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="{{ form.subtotal.id_for_label }}" class="form-label">
+                            Subtotal
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.subtotal.name }}" id="subtotal" 
+                                   value="{{ form.subtotal.value|default:'' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0" readonly>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.discounts.id_for_label }}" class="form-label">
+                            Discounts
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.discounts.name }}" id="discounts" 
+                                   value="{{ form.discounts.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.penalties.id_for_label }}" class="form-label">
+                            Penalties
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" name="{{ form.penalties.name }}" id="penalties" 
+                                   value="{{ form.penalties.value|default:'0' }}" 
+                                   class="glass-input pl-12" 
+                                   step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-white/5 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="text-white font-medium">Total Amount:</span>
+                        <span class="text-2xl font-bold text-blue-400" id="totalAmount">KSh 0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Charges (JSON) -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Additional Charges</h3>
+                
+                <div id="additionalCharges">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 charge-row">
+                        <div>
+                            <input type="text" class="glass-input" placeholder="Description" id="chargeDesc1">
+                        </div>
+                        <div>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-white/40">KSh</span>
+                                </div>
+                                <input type="number" class="glass-input pl-12" placeholder="Amount" id="chargeAmount1" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" onclick="addCharge()" class="glass-button w-full">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="additional_charges" id="additionalChargesInput" value="[]">
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                    Notes
+                </label>
+                <textarea name="{{ form.notes.name }}" id="notes" rows="3" 
+                          class="glass-input">{{ form.notes.value|default:'' }}</textarea>
+                {% if form.notes.errors %}
+                <p class="text-sm text-red-400 mt-1">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                <a href="{% url 'finance:invoice_list' %}" class="glass-button">
+                    Cancel
+                </a>
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-save mr-2"></i>{% if invoice %}Update{% else %}Create{% endif %} Invoice
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include Select2 CSS and JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Search for a student...",
+            allowClear: true,
+            theme: 'classic'
+        });
+    });
+
+    // Fee structure selection
+    const feeSelect = document.getElementById('feeStructureSelect');
+    const subtotalInput = document.getElementById('subtotal');
+    const discountsInput = document.getElementById('discounts');
+    const penaltiesInput = document.getElementById('penalties');
+    const totalSpan = document.getElementById('totalAmount');
+    const feePreview = document.getElementById('feePreview');
+    const feeBreakdown = document.getElementById('feeBreakdown');
+
+    feeSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value) {
+            const total = parseFloat(selected.dataset.total) || 0;
+            subtotalInput.value = total.toFixed(2);
+            calculateTotal();
+            
+            // Fetch fee breakdown (you'd need an API endpoint for this)
+            fetch(`/finance/api/fee-structure/${selected.value}/`)
+                .then(response => response.json())
+                .then(data => {
+                    let html = '';
+                    for (const [key, value] of Object.entries(data.breakdown)) {
+                        if (value > 0) {
+                            html += `<div class="flex justify-between">
+                                <span class="text-white/60">${key}:</span>
+                                <span class="text-white">KSh ${value.toFixed(2)}</span>
+                            </div>`;
+                        }
+                    }
+                    feeBreakdown.innerHTML = html;
+                    feePreview.classList.remove('hidden');
+                });
+        } else {
+            subtotalInput.value = '';
+            feePreview.classList.add('hidden');
+        }
+    });
+
+    // Calculate total
+    function calculateTotal() {
+        const subtotal = parseFloat(subtotalInput.value) || 0;
+        const discounts = parseFloat(discountsInput.value) || 0;
+        const penalties = parseFloat(penaltiesInput.value) || 0;
+        
+        // Get additional charges
+        const charges = getAdditionalCharges();
+        const chargesTotal = charges.reduce((sum, charge) => sum + charge.amount, 0);
+        
+        const total = subtotal - discounts + penalties + chargesTotal;
+        totalSpan.textContent = 'KSh ' + total.toFixed(2);
+    }
+
+    subtotalInput.addEventListener('input', calculateTotal);
+    discountsInput.addEventListener('input', calculateTotal);
+    penaltiesInput.addEventListener('input', calculateTotal);
+
+    // Additional charges
+    let chargeCount = 1;
+    const charges = [];
+
+    function addCharge() {
+        chargeCount++;
+        const desc = document.getElementById(`chargeDesc${chargeCount-1}`).value;
+        const amount = parseFloat(document.getElementById(`chargeAmount${chargeCount-1}`).value) || 0;
+        
+        if (desc && amount > 0) {
+            charges.push({ description: desc, amount: amount });
+            
+            const html = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 charge-row">
+                    <div>
+                        <input type="text" class="glass-input" placeholder="Description" id="chargeDesc${chargeCount}" value="${desc}" readonly>
+                    </div>
+                    <div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-white/40">KSh</span>
+                            </div>
+                            <input type="number" class="glass-input pl-12" value="${amount.toFixed(2)}" readonly>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" onclick="removeCharge(${chargeCount-1})" class="glass-button w-full bg-red-600/50">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('additionalCharges').insertAdjacentHTML('beforeend', html);
+            document.getElementById('additionalChargesInput').value = JSON.stringify(charges);
+            calculateTotal();
+        }
+    }
+
+    function removeCharge(index) {
+        charges.splice(index, 1);
+        document.getElementById('additionalChargesInput').value = JSON.stringify(charges);
+        calculateTotal();
+        // You'd also remove the row from DOM
+    }
+
+    function getAdditionalCharges() {
+        return charges;
+    }
+
+    // Initialize
+    calculateTotal();
+</script>
+
+<style>
+    .select2-container--classic .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        height: 45px;
+        color: white;
+    }
+    
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+        color: white;
+        line-height: 45px;
+    }
+</style>
+{% endblock %}

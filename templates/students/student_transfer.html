@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transfer Student - {{ student.get_full_name }}{% endblock %}
+
+{% block page_title %}Transfer Student: {{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Student Info Card -->
+    <div class="glass-card p-6 mb-6">
+        <div class="flex items-center">
+            <img src="{{ student.user.get_profile_picture }}" alt="{{ student.get_full_name }}" 
+                 class="h-16 w-16 rounded-full object-cover border-2 border-white mr-4">
+            <div>
+                <h2 class="text-xl font-bold text-white">{{ student.get_full_name }}</h2>
+                <p class="text-white/60">Admission: {{ student.admission_number }}</p>
+                <p class="text-white/60">Current Class: <span class="text-yellow-400 font-semibold">{{ student.get_current_class_name }}</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Form -->
+    <div class="glass-card p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Transfer to New Class</h3>
+        
+        <form method="post" id="transferForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert-error p-4 rounded-lg mb-6">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="space-y-6">
+                <!-- New Class Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.new_class.id_for_label }}" class="form-label">
+                            New Class <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.new_class.name }}" id="newClass" class="glass-input" required>
+                            <option value="">Select Class</option>
+                            {% for value, label in form.new_class.field.choices %}
+                            <option value="{{ value }}" {% if form.new_class.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.new_class.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.new_class.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.new_stream.id_for_label }}" class="form-label">
+                            New Stream <span class="text-red-400">*</span>
+                        </label>
+                        <select name="{{ form.new_stream.name }}" id="newStream" class="glass-input" required>
+                            <option value="">Select Stream</option>
+                            {% for value, label in form.new_stream.field.choices %}
+                            <option value="{{ value }}" {% if form.new_stream.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.new_stream.errors %}
+                        <p class="text-sm text-red-400 mt-1">{{ form.new_stream.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Effective Date -->
+                <div>
+                    <label for="{{ form.effective_date.id_for_label }}" class="form-label">
+                        Effective Date <span class="text-red-400">*</span>
+                    </label>
+                    <input type="date" name="{{ form.effective_date.name }}" id="effectiveDate" 
+                           value="{{ form.effective_date.value|date:'Y-m-d'|default:'' }}" 
+                           class="glass-input" required>
+                    {% if form.effective_date.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.effective_date.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-white/40 mt-1">The date when the transfer takes effect</p>
+                </div>
+
+                <!-- Reason for Transfer -->
+                <div>
+                    <label for="{{ form.reason.id_for_label }}" class="form-label">
+                        Reason for Transfer
+                    </label>
+                    <textarea name="{{ form.reason.name }}" id="reason" rows="4" 
+                              class="glass-input" placeholder="Please provide reason for transfer (optional)">{{ form.reason.value|default:'' }}</textarea>
+                    {% if form.reason.errors %}
+                    <p class="text-sm text-red-400 mt-1">{{ form.reason.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Transfer Preview -->
+                <div class="bg-blue-500/10 rounded-lg p-4">
+                    <h4 class="text-white font-medium mb-3">Transfer Summary</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-white/60">Student:</span>
+                            <span class="text-white">{{ student.get_full_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white/60">From:</span>
+                            <span class="text-yellow-400">{{ student.get_current_class_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white/60">To:</span>
+                            <span class="text-green-400" id="previewClass">Not selected</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white/60">Effective:</span>
+                            <span class="text-white" id="previewDate">Not set</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning Messages -->
+                <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <h4 class="text-yellow-400 font-medium mb-2 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Important Notes
+                    </h4>
+                    <ul class="text-sm text-white/80 space-y-1 list-disc list-inside">
+                        <li>This transfer will update the student's class and stream permanently</li>
+                        <li>All future attendance and results will be recorded under the new class</li>
+                        <li>Historical data will remain unchanged</li>
+                        <li>Subject allocations may need to be updated after transfer</li>
+                        <li>A note will be automatically created to record this transfer</li>
+                    </ul>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end space-x-3 pt-6 border-t border-white/20">
+                    <a href="{% url 'students:detail' student.id %}" class="glass-button">
+                        Cancel
+                    </a>
+                    <button type="submit" class="glass-button bg-yellow-600/50" onclick="return confirmTransfer()">
+                        <i class="fas fa-exchange-alt mr-2"></i>Confirm Transfer
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transfer History -->
+    {% if transfer_history %}
+    <div class="glass-card mt-6 p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Transfer History</h3>
+        <div class="space-y-3">
+            {% for note in transfer_history %}
+            <div class="bg-white/5 rounded-lg p-3">
+                <div class="flex items-start">
+                    <i class="fas fa-history text-blue-400 mt-1 mr-3"></i>
+                    <div class="flex-1">
+                        <p class="text-white">{{ note.content }}</p>
+                        <p class="text-xs text-white/40 mt-1">{{ note.created_at|date:"d M Y H:i" }} by {{ note.created_by.get_full_name|default:"System" }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Update preview
+    const newClass = document.getElementById('newClass');
+    const newStream = document.getElementById('newStream');
+    const previewClass = document.getElementById('previewClass');
+    const effectiveDate = document.getElementById('effectiveDate');
+    const previewDate = document.getElementById('previewDate');
+
+    function updatePreview() {
+        const classText = newClass.options[newClass.selectedIndex]?.text || 'Not selected';
+        const streamText = newStream.options[newStream.selectedIndex]?.text || '';
+        
+        if (newClass.value && newStream.value) {
+            previewClass.textContent = `${classText} ${streamText}`;
+            previewClass.classList.remove('text-white/60');
+        } else {
+            previewClass.textContent = 'Not selected';
+        }
+
+        if (effectiveDate.value) {
+            const date = new Date(effectiveDate.value);
+            previewDate.textContent = date.toLocaleDateString('en-GB', { 
+                day: '2-digit', month: 'short', year: 'numeric' 
+            });
+        } else {
+            previewDate.textContent = 'Not set';
+        }
+    }
+
+    newClass.addEventListener('change', updatePreview);
+    newStream.addEventListener('change', updatePreview);
+    effectiveDate.addEventListener('change', updatePreview);
+
+    // Confirm transfer
+    function confirmTransfer() {
+        const classVal = newClass.value;
+        const streamVal = newStream.value;
+        
+        if (!classVal || !streamVal) {
+            alert('Please select both class and stream');
+            return false;
+        }
+
+        const classText = newClass.options[newClass.selectedIndex].text;
+        const streamText = newStream.options[newStream.selectedIndex].text;
+        
+        return confirm(`Are you sure you want to transfer ${student.get_full_name}} to ${classText} ${streamText}?`);
+    }
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    effectiveDate.setAttribute('min', today);
+
+    // Initialize preview
+    updatePreview();
+</script>
+{% endblock %}

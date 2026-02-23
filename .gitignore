@@ -10,10 +10,10 @@ ENV/
 env.bak/
 venv.bak/
 
-# Database
-*.sqlite3
-*.db
-db.sqlite3
+# Database - Comment out if using SQLite on Railway with volume
+# *.sqlite3
+# *.db
+# db.sqlite3
 
 # Media files
 /media/
@@ -63,3 +63,7 @@ celerybeat.pid
 # OS
 .DS_Store
 Thumbs.db
+
+# Railway
+.railway/
+railway.json

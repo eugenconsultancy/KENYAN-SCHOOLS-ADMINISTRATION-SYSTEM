@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Collection Report - Kenyan Schools System{% endblock %}
+
+{% block page_title %}Fee Collection Report{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Report Controls -->
+    <div class="glass-card p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="glass-input" required>
+            </div>
+            <div>
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="glass-input" required>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="glass-button bg-blue-600/50">
+                    <i class="fas fa-filter mr-2"></i>Generate Report
+                </button>
+                <a href="{% url 'finance:collection_report' %}?export=1&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="glass-button">
+                    <i class="fas fa-download mr-2"></i>Export
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Report Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Total Collected</p>
+                    <p class="text-2xl font-bold text-green-400">KSh {{ total_collected|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Transactions</p>
+                    <p class="text-2xl font-bold text-blue-400">{{ total_transactions }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-exchange-alt text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Average Transaction</p>
+                    <p class="text-2xl font-bold text-yellow-400">KSh {{ average_transaction|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-line text-yellow-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-white/60">Period</p>
+                    <p class="text-2xl font-bold text-purple-400">{{ days }} days</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-calendar-alt text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Daily Collection Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Daily Collections</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="dailyChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Methods Chart -->
+        <div class="glass-card">
+            <div class="border-b border-white/20 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white">Payment Methods</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="methodsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Breakdown -->
+    <div class="glass-card mb-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Payment Methods Breakdown</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for method in by_method %}
+                <div class="bg-white/5 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-white font-medium">
+                            {% if method.payment_method == 'cash' %}
+                                <i class="fas fa-money-bill-wave text-green-400 mr-2"></i>Cash
+                            {% elif method.payment_method == 'mpesa' %}
+                                <i class="fas fa-mobile-alt text-blue-400 mr-2"></i>M-Pesa
+                            {% elif method.payment_method == 'bank_transfer' %}
+                                <i class="fas fa-university text-purple-400 mr-2"></i>Bank Transfer
+                            {% elif method.payment_method == 'cheque' %}
+                                <i class="fas fa-money-check text-yellow-400 mr-2"></i>Cheque
+                            {% else %}
+                                <i class="fas fa-credit-card text-gray-400 mr-2"></i>Other
+                            {% endif %}
+                        </h4>
+                        <span class="badge badge-info">{{ method.count }} transactions</span>
+                    </div>
+                    <p class="text-2xl font-bold text-white">KSh {{ method.total|floatformat:2 }}</p>
+                    <p class="text-xs text-white/40 mt-1">{{ method.percentage|floatformat:1 }}% of total</p>
+                </div>
+                {% empty %}
+                <p class="text-white/60 col-span-3 text-center">No payment data available</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Breakdown Table -->
+    <div class="glass-card">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Daily Breakdown</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-right">Amount</th>
+                            <th class="px-4 py-2 text-center">Transactions</th>
+                            <th class="px-4 py-2 text-right">Average</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in daily %}
+                        <tr class="border-t border-white/10">
+                            <td class="px-4 py-3 text-white">{{ day.day|date:"d M Y" }}</td>
+                            <td class="px-4 py-3 text-right text-green-400 font-bold">KSh {{ day.total|floatformat:2 }}</td>
+                            <td class="px-4 py-3 text-center text-white">{{ day.count }}</td>
+                            <td class="px-4 py-3 text-right text-white">KSh {{ day.average|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-white/60">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payments Table -->
+    <div class="glass-card mt-6">
+        <div class="border-b border-white/20 px-6 py-4">
+            <h3 class="text-lg font-semibold text-white">Recent Payments</h3>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="text-white/60 text-sm">
+                            <th class="px-4 py-2 text-left">Date</th>
+                            <th class="px-4 py-2 text-left">Student</th>
+                            <th class="px-4 py-2 text-left">Admission No.</th>
+                            <th class="px-4 py-2 text-left">Method</th>
+                            <th class="px-4 py-2 text-right">Amount</th>
+                            <th class="px-4 py-2 text-left">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr class="border-t border-white/10 hover:bg-white/5">
+                            <td class="px-4 py-3 text-white">{{ payment.payment_date|date:"d M Y H:i" }}</td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center">
+                                    <img src="{{ payment.student.user.get_profile_picture }}" alt="" class="h-8 w-8 rounded-full object-cover mr-2">
+                                    <span class="text-white">{{ payment.student.get_full_name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-white">{{ payment.student.admission_number }}</td>
+                            <td class="px-4 py-3">
+                                <span class="badge badge-info">{{ payment.get_payment_method_display }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-right text-green-400 font-bold">KSh {{ payment.amount|floatformat:2 }}</td>
+                            <td class="px-4 py-3 text-white font-mono text-sm">{{ payment.reference_number|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-white/60">No payments found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Daily Collection Chart
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ daily_labels|safe }},
+            datasets: [{
+                label: 'Collections (KSh)',
+                data: {{ daily_totals|safe }},
+                borderColor: 'rgb(34, 197, 94)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            return 'KSh ' + value.toLocaleString();
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Payment Methods Chart
+    const methodsCtx = document.getElementById('methodsChart').getContext('2d');
+    new Chart(methodsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ method_labels|safe }},
+            datasets: [{
+                data: {{ method_data|safe }},
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.8)',   // Cash - Green
+                    'rgba(59, 130, 246, 0.8)',  // M-Pesa - Blue
+                    'rgba(168, 85, 247, 0.8)',  // Bank - Purple
+                    'rgba(234, 179, 8, 0.8)',   // Cheque - Yellow
+                    'rgba(107, 114, 128, 0.8)'  // Other - Gray
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
